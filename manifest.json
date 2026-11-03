@@ -1,0 +1,10 @@
+{
+  "id": "vault-mind",
+  "name": "Vault Mind",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "An AI agent for Obsidian. Chat, edit, and automate your vault with subscription or API key auth.",
+  "author": "Mohamed Alsayed",
+  "authorUrl": "https://mohamedalsayed.me",
+  "isDesktopOnly": false
+}
