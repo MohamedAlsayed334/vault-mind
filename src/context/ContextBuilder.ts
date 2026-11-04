@@ -1,33 +1,33 @@
-import { App } from "obsidian";
+import type { VaultAdapter } from "@/obsidian/VaultAdapter";
 
 export interface ContextPackage {
 	currentNote: { path: string; content: string } | null;
 	selection: string | null;
 }
 
+const MAX_NOTE_CONTENT = 8000;
+
 export class ContextBuilder {
-	constructor(private app: App) {}
+	constructor(private vault: VaultAdapter) {}
 
 	async buildContext(): Promise<ContextPackage> {
-		const activeFile = this.app.workspace.getActiveFile();
+		const activeFile = this.vault.getActiveFile();
 		if (!activeFile) {
 			return { currentNote: null, selection: null };
 		}
 
-		let content = await this.app.vault.read(activeFile);
-		if (content.length > 8000) {
-			content = content.slice(0, 8000) + "\n... (truncated)";
+		let content = "";
+		try {
+			content = await this.vault.read(activeFile.path);
+		} catch {
+			return { currentNote: null, selection: null };
 		}
 
-		let selection: string | null = null;
-		const activeView = this.app.workspace.getActiveViewOfType(this.app.workspace.getLeavesOfType("markdown")[0]?.view as any);
-		if (activeView && (activeView as any).editor) {
-			const editor = (activeView as any).editor;
-			const selectedText = editor.getSelection();
-			if (selectedText) {
-				selection = selectedText;
-			}
+		if (content.length > MAX_NOTE_CONTENT) {
+			content = content.slice(0, MAX_NOTE_CONTENT) + "\n... (truncated)";
 		}
+
+		const selection = this.vault.getSelection() || null;
 
 		return {
 			currentNote: {
