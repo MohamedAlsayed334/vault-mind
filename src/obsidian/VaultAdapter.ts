@@ -1,4 +1,4 @@
-import { App, TFile, TFolder, normalizePath } from "obsidian";
+import { App, TFile, normalizePath } from "obsidian";
 
 /**
  * All vault I/O goes through this adapter.
