@@ -5,6 +5,8 @@ import { VaultAdapter } from "@/obsidian/VaultAdapter";
 import { AgentOrchestrator } from "@/core/AgentOrchestrator";
 import { ReadNoteTool } from "@/tools/vault/ReadNote";
 import { GeminiProvider } from "@/providers/gemini/GeminiProvider";
+import { PluginStorage, type VaultMindSettings } from "@/storage/PluginStorage";
+import { SettingsTab } from "@/ui/settings/SettingsTab";
 import type { PlatformCapabilities } from "@/core/types";
 
 export default class VaultMindPlugin extends Plugin {
@@ -13,8 +15,14 @@ export default class VaultMindPlugin extends Plugin {
   vaultAdapter!: VaultAdapter;
   orchestrator!: AgentOrchestrator;
   platform!: PlatformCapabilities;
+  settings!: VaultMindSettings;
+  storage!: PluginStorage;
 
   async onload() {
+    this.storage = new PluginStorage(this);
+    this.settings = await this.storage.loadSettings();
+
+    this.addSettingTab(new SettingsTab(this.app, this));
     this.platform = {
       isMobile: Platform.isMobile,
       canStream: true, // determined per-provider at runtime
