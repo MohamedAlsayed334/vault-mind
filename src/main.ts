@@ -5,6 +5,7 @@ import { VaultAdapter } from "@/obsidian/VaultAdapter";
 import { AgentOrchestrator } from "@/core/AgentOrchestrator";
 import { ReadNoteTool } from "@/tools/vault/ReadNote";
 import { GeminiProvider } from "@/providers/gemini/GeminiProvider";
+import { OpenAIProvider } from "@/providers/openai/OpenAIProvider";
 import { PluginStorage, type VaultMindSettings } from "@/storage/PluginStorage";
 import { SettingsTab } from "@/ui/settings/SettingsTab";
 import type { PlatformCapabilities } from "@/core/types";
@@ -41,6 +42,7 @@ export default class VaultMindPlugin extends Plugin {
 
     // Register providers
     this.providerRegistry.register(new GeminiProvider());
+    this.providerRegistry.register(new OpenAIProvider());
 
     // TODO: mount UI views
 

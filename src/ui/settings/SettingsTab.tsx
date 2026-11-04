@@ -1,5 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type VaultMindPlugin from "@/main";
+import { AuthManager } from "@/auth/AuthManager";
+import { OAuthFlow } from "@/auth/OAuthFlow";
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: VaultMindPlugin;
@@ -25,8 +27,23 @@ export class SettingsTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						if (this.plugin.settings) {
 							this.plugin.settings.geminiApiKey = value;
-							await this.plugin.saveSettings(this.plugin.settings);
+							await this.plugin.storage.saveSettings(this.plugin.settings);
 						}
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Connect OpenAI")
+			.setDesc("Log in or provide your OpenAI token for GPT models.")
+			.addButton((button) =>
+				button
+					.setButtonText("Connect OpenAI")
+					.setCta()
+					.onClick(async () => {
+						const flow = new OAuthFlow();
+						const { codeChallenge } = await flow.generatePKCE();
+						const url = flow.buildAuthUrl("openai", "mock-client-id", "obsidian://vault-mind-auth", codeChallenge);
+						window.open(url);
 					})
 			);
 
