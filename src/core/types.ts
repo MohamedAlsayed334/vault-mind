@@ -45,7 +45,7 @@ export type ContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; url: string; mediaType: string }
   | { type: "tool_use"; id: string; name: string; input: unknown }
-  | { type: "tool_result"; toolUseId: string; content: string };
+  | { type: "tool_result"; toolUseId: string; name: string; content: string };
 
 // ─── Tool types ───────────────────────────────────────────────────────────────
 
