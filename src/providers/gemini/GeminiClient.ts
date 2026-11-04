@@ -91,7 +91,7 @@ export class GeminiClient {
     };
   }
 
-  private messageParts(message: ChatMessage): GeminiPart[] {
+  private messageParts(message: ChatMessage, toolNames: Map<string, string>): GeminiPart[] {
     if (typeof message.content === "string") return message.content ? [{ text: message.content }] : [];
     const parts: GeminiPart[] = [];
     for (const block of message.content as ContentBlock[]) {
@@ -99,7 +99,7 @@ export class GeminiClient {
       else if (block.type === "tool_use") {
         parts.push({ functionCall: { name: block.name, args: block.input } });
       } else if (block.type === "tool_result") {
-        parts.push({ functionResponse: { name: block.toolUseId, response: { result: block.content } } });
+        parts.push({ functionResponse: { name: toolNames.get(block.toolUseId) ?? block.toolUseId, response: { result: block.content } } });
       }
     }
     return parts;
