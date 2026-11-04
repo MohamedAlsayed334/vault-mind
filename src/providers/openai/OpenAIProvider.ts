@@ -41,25 +41,78 @@ export class OpenAIProvider implements AIProvider {
 		this.accessToken = undefined;
 	}
 
+	/**
+	 * Used as-is when the live models fetch fails (network error, non-200,
+	 * malformed body) so the settings UI always has a usable list.
+	 */
+	static readonly fallbackModels: ModelInfo[] = [
+		{
+			id: "gpt-6.1-sol",
+			name: "GPT-6.1 Sol",
+			contextWindow: 1050000,
+			supportsTools: true,
+			supportsStreaming: true,
+			supportsVision: true,
+		},
+		{
+			id: "gpt-6-luna",
+			name: "GPT-6 Luna",
+			contextWindow: 1050000,
+			supportsTools: true,
+			supportsStreaming: true,
+			supportsVision: true,
+		},
+	];
+
 	async getModels(): Promise<ModelInfo[]> {
-		return [
-			{
-				id: "gpt-6.1-sol",
-				name: "GPT-6.1 Sol",
-				contextWindow: 1050000,
-				supportsTools: true,
-				supportsStreaming: true,
-				supportsVision: true,
-			},
-			{
-				id: "gpt-6-luna",
-				name: "GPT-6 Luna",
-				contextWindow: 1050000,
-				supportsTools: true,
-				supportsStreaming: true,
-				supportsVision: true,
-			},
-		];
+		if (!this.accessToken) {
+			return OpenAIProvider.fallbackModels;
+		}
+
+		try {
+			const res = await fetch("https://api.openai.com/v1/models", {
+				method: "GET",
+				headers: { Authorization: `Bearer ${this.accessToken}` },
+			});
+			if (!res.ok) {
+				return OpenAIProvider.fallbackModels;
+			}
+
+			const data = await res.json();
+			const entries = data?.data;
+			if (!Array.isArray(entries)) {
+				return OpenAIProvider.fallbackModels;
+			}
+
+			const models = entries
+				.filter((m) => typeof m.id === "string" && m.id.length > 0)
+				.map((m): ModelInfo => {
+					const id = m.id;
+					// The list endpoint does not advertise modality per family, so
+					// tool/stream/vision support is derived from known chat-capable
+					// families and stays conservative where unsure.
+					const chatCapable = OpenAIProvider.isChatCapable(id);
+					return {
+						id,
+						name: id,
+						// Input context is not reported by the list endpoint.
+						contextWindow: 0,
+						supportsTools: chatCapable,
+						supportsStreaming: chatCapable,
+						supportsVision: /^(gpt-4o|gpt-4\.1|gpt-5|gpt-6|o[0-9])/.test(id),
+					};
+				});
+
+			return models.length > 0 ? models : OpenAIProvider.fallbackModels;
+		} catch {
+			// Network error / bad JSON — the static list keeps the UI working.
+			return OpenAIProvider.fallbackModels;
+		}
+	}
+
+	/** True for families known to accept chat completions (incl. tool calls). */
+	private static isChatCapable(id: string): boolean {
+		return /^(chatgpt|gpt-3\.5-turbo|gpt-4|gpt-5|gpt-6|o[0-9])/.test(id);
 	}
 
 	async *generate(request: AIRequest): AsyncIterable<AIEvent> {
