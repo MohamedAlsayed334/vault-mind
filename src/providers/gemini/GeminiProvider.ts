@@ -1,4 +1,5 @@
-import type { AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";\nimport type { AIProvider } from "@/providers/base/AIProvider";
+import type { AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";
+import type { AIProvider } from "@/providers/base/AIProvider";
 import { GeminiClient, type GeminiFallback } from "./GeminiClient";
 
 export class GeminiProvider implements AIProvider {
@@ -35,8 +36,8 @@ export class GeminiProvider implements AIProvider {
 
   async getModels(): Promise<ModelInfo[]> {
     return [
-      { id: "gemini-3.8-flash", name: "Gemini 3.8 Flash", contextWindow: 1_000_000, supportsTools: true, supportsStreaming: true, supportsVision: true },
-      { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash-Lite", contextWindow: 1_000_000, supportsTools: true, supportsStreaming: true, supportsVision: true },
+      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", contextWindow: 1_000_000, supportsTools: true, supportsStreaming: true, supportsVision: true },
+      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", contextWindow: 2_000_000, supportsTools: true, supportsStreaming: true, supportsVision: true },
     ];
   }
 
