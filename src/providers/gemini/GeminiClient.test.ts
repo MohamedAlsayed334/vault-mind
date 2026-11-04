@@ -81,6 +81,25 @@ describe("GeminiClient", () => {
 		]);
 	});
 
+	it("sends the API key via the x-goog-api-key header, not the URL", async () => {
+		const fetchMock = vi.fn().mockResolvedValue(sseResponse([textChunk]));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const client = new GeminiClient();
+		client.setApiKey("secret-key-123");
+
+		for await (const _ of client.streamGenerateContent({
+			model: "gemini-2.0-flash",
+			messages: [{ role: "user", content: "hi" }],
+		})) {
+			// consume
+		}
+
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(init.headers["x-goog-api-key"]).toBe("secret-key-123");
+		expect(String(url)).not.toContain("secret-key-123");
+	});
+
 	it("sends tool definitions as functionDeclarations", async () => {
 		const fetchMock = vi.fn().mockResolvedValue(sseResponse([]));
 		vi.stubGlobal("fetch", fetchMock);

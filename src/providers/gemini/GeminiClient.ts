@@ -28,7 +28,7 @@ export class GeminiClient {
 			throw new Error("API key not set");
 		}
 
-		const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
+		const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:streamGenerateContent?alt=sse`;
 
 		const body: Record<string, unknown> = {
 			contents: params.messages.map((msg) => ({
@@ -59,6 +59,8 @@ export class GeminiClient {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
+				// Auth via header keeps the key out of URLs (which end up in logs/proxies).
+				"x-goog-api-key": this.apiKey,
 			},
 			body: JSON.stringify(body),
 			signal: params.signal,
