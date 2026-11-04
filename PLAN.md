@@ -272,7 +272,7 @@ The user can:
 
 When one AI finishes a phase and hands off to the next, add a note here:
 
-### Phase 1 — Status: TODO
+### Phase 1 — Status: IN PROGRESS
 ### Phase 2 — Status: TODO
 ### Phase 3 — Status: TODO
 ### Phase 4 — Status: TODO
