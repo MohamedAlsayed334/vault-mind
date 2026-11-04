@@ -7,7 +7,9 @@ export class OpenAIProvider implements AIProvider {
 	readonly name = "OpenAI";
 	readonly capabilities: ProviderCapabilities = {
 		streaming: true,
-		toolCalling: true,
+		// Tool-call mapping is not implemented yet for OpenAI; the agent loop
+		// simply won't receive tool_call events from this provider for now.
+		toolCalling: false,
 		vision: true,
 		corsCompatible: true,
 	};

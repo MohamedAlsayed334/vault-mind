@@ -1,7 +1,13 @@
-import type { ChatMessage } from "@/core/types";
+import type { ChatMessage, ContentBlock, ToolDefinition } from "@/core/types";
+
+export interface GeminiFunctionCall {
+	name: string;
+	args: Record<string, unknown>;
+}
 
 export interface GeminiStreamChunk {
 	text?: string;
+	functionCall?: GeminiFunctionCall;
 }
 
 export class GeminiClient {
@@ -14,6 +20,7 @@ export class GeminiClient {
 	async *streamGenerateContent(params: {
 		model: string;
 		messages: ChatMessage[];
+		tools?: ToolDefinition[];
 		systemPrompt?: string;
 		signal?: AbortSignal;
 	}): AsyncIterable<GeminiStreamChunk> {
@@ -23,17 +30,29 @@ export class GeminiClient {
 
 		const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 
-		const contents = params.messages.map((msg) => ({
-			role: msg.role === "assistant" ? "model" : "user",
-			parts: [{ text: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content) }],
-		}));
-
-		const body: any = { contents };
+		const body: Record<string, unknown> = {
+			contents: params.messages.map((msg) => ({
+				role: this.roleFor(msg),
+				parts: this.partsFor(msg.content),
+			})),
+		};
 
 		if (params.systemPrompt) {
 			body.system_instruction = {
 				parts: [{ text: params.systemPrompt }],
 			};
+		}
+
+		if (params.tools && params.tools.length > 0) {
+			body.tools = [
+				{
+					functionDeclarations: params.tools.map((tool) => ({
+						name: tool.name,
+						description: tool.description,
+						parameters: tool.inputSchema,
+					})),
+				},
+			];
 		}
 
 		const response = await fetch(url, {
@@ -76,11 +95,23 @@ export class GeminiClient {
 
 						try {
 							const data = JSON.parse(jsonStr);
-							const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-							if (text) {
-								yield { text };
+							const parts = data.candidates?.[0]?.content?.parts;
+							if (Array.isArray(parts)) {
+								for (const part of parts) {
+									if (typeof part.text === "string" && part.text.length > 0) {
+										yield { text: part.text };
+									}
+									if (part.functionCall) {
+										yield {
+											functionCall: {
+												name: part.functionCall.name,
+												args: part.functionCall.args ?? {},
+											},
+										};
+									}
+								}
 							}
-						} catch (e) {
+						} catch {
 							// Ignore parse errors for incomplete chunks
 						}
 					}
@@ -89,5 +120,44 @@ export class GeminiClient {
 		} finally {
 			reader.releaseLock();
 		}
+	}
+
+	private roleFor(msg: ChatMessage): "model" | "user" {
+		return msg.role === "assistant" ? "model" : "user";
+	}
+
+	/** Map a message's content into Gemini parts (text / functionCall / functionResponse). */
+	private partsFor(content: ChatMessage["content"]): Array<Record<string, unknown>> {
+		if (typeof content === "string") {
+			return [{ text: content }];
+		}
+
+		const parts: Array<Record<string, unknown>> = [];
+		for (const block of content as ContentBlock[]) {
+			switch (block.type) {
+				case "text":
+					parts.push({ text: block.text });
+					break;
+				case "tool_use":
+					parts.push({
+						functionCall: {
+							name: block.name,
+							args: (block.input as Record<string, unknown>) ?? {},
+						},
+					});
+					break;
+				case "tool_result":
+					parts.push({
+						functionResponse: {
+							name: block.name,
+							response: { result: block.content },
+						},
+					});
+					break;
+				default:
+					break;
+			}
+		}
+		return parts.length > 0 ? parts : [{ text: "" }];
 	}
 }

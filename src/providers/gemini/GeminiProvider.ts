@@ -7,7 +7,7 @@ export class GeminiProvider implements AIProvider {
 	readonly name = "Google Gemini";
 	readonly capabilities: ProviderCapabilities = {
 		streaming: true,
-		toolCalling: false,
+		toolCalling: true,
 		vision: true,
 		corsCompatible: true,
 	};
@@ -70,6 +70,7 @@ export class GeminiProvider implements AIProvider {
 			const stream = this.client.streamGenerateContent({
 				model,
 				messages: request.messages,
+				tools: request.tools,
 				systemPrompt: request.systemPrompt,
 				signal: request.signal,
 			});
@@ -77,6 +78,14 @@ export class GeminiProvider implements AIProvider {
 			for await (const chunk of stream) {
 				if (chunk.text) {
 					yield { type: "text_delta", delta: chunk.text };
+				}
+				if (chunk.functionCall) {
+					yield {
+						type: "tool_call",
+						id: chunk.functionCall.name,
+						name: chunk.functionCall.name,
+						arguments: chunk.functionCall.args,
+					};
 				}
 			}
 			yield { type: "done" };
