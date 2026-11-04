@@ -1,26 +1,25 @@
 # Vault Mind
 
-Vault Mind is an Obsidian plugin project for AI-assisted note work. The V1 implementation phases (1–7) are recorded as complete in [PLAN.md](./PLAN.md), but **the current code still needs end-to-end integration and validation before it should be treated as a usable V1 or release**.
+Vault Mind is an Obsidian plugin for AI-assisted note work: an agent with a reasoning loop, vault tool execution (read / search / edit), and an approval gate for every write. Desktop + mobile.
 
-## Current implementation
+The V1 implementation phases (1–8) are recorded in [docs/PLAN.md](./docs/PLAN.md). Phases 1–7 are implemented and the integration gaps found in the November 2026 review have been fixed — see [docs/REVIEW.md](./docs/REVIEW.md).
 
-Implemented modules include:
+## What works now
 
-- Gemini provider using an API key
-- OpenAI provider adapter
-- Plugin settings storage and settings tab
-- Chat UI components and agent hook
-- Agent orchestration, context builder, vault read/edit/search tools
-- OAuth-related PKCE/token-store scaffolding
-
-Some modules are not yet connected end-to-end. In particular, the current plugin entry does not register the chat view/command or wire in edit/search tools and context. OAuth is **not ready for real sign-in** (the settings UI uses a placeholder client ID). Treat these as implementation status, not working user-facing features.
+- Chat sidebar (ribbon icon or **Open Vault Mind** command) with streaming responses
+- Agent loop with tool calling: `read_note`, `search_vault`, `edit_note`
+- Approval gate: `edit_note` shows an Approve/Reject card and never writes without explicit approval
+- Vault context: the active note and your current selection are included automatically
+- Gemini provider with API key and full tool-call round trip; OpenAI provider (API key, text-only for now)
+- API keys stored in browser-side `TokenStore`, never in `data.json` (legacy keys are migrated out automatically)
+- Automated checks: typecheck, ESLint, Vitest (agent loop, approval gate, Gemini SSE/tool mapping), production build — all wired into GitHub Actions CI
 
 ## Requirements
 
 - Node.js 20 or newer
 - npm
 - Obsidian desktop for the first manual test (test mobile separately)
-- A Gemini API key for provider/API testing
+- A Gemini API key
 
 ## Install dependencies and run checks
 
@@ -52,39 +51,25 @@ This starts esbuild watch mode.
    - `main.js`
    - `manifest.json`
    - `versions.json`
-4. In Obsidian, open **Settings → Community plugins** and reload/enable Vault Mind. If it does not appear, restart Obsidian and check the developer console for errors.
-5. Open **Settings → Vault Mind** and check that the settings tab loads.
-6. Enter a Gemini API key and close/reopen the settings tab to verify that the setting persists.
+4. In Obsidian, open **Settings → Community plugins** and enable Vault Mind. If it does not appear, restart Obsidian and check the developer console for errors.
+5. Open **Settings → Vault Mind**, choose a provider, enter your API key, and pick a model.
+6. Click the Vault Mind ribbon icon (or run **Open Vault Mind** from the command palette) to open the chat sidebar.
 
-Do not copy `styles.css`: the current build does not produce a standalone stylesheet.
-
-### What you can test manually right now
-
-- Plugin loading in a test vault
-- Settings tab rendering
-- Gemini key/model setting persistence
-- Obsidian console errors during plugin startup
-
-The current `main.ts` does not yet register a chat sidebar or “Open Vault Mind” command, so **you cannot currently perform a real chat/edit/search workflow from the plugin UI**. Provider unit tests are not a substitute for a live Gemini request.
+The full manual test script — chat smoke test, read/search tools, the write-approval gate, cancellation, persistence, and a mobile checklist — lives in [docs/TESTING.md](./docs/TESTING.md).
 
 ## Automated test coverage
 
-Current tests are small unit tests for provider initialization/auth state, token storage, and context-builder initialization. They do not yet cover:
-
-- Gemini streaming/API error handling with mocked network responses
-- OAuth callback and token exchange
-- Agent tool-call loop and approval resolution
-- Actual note editing and search behavior
-- Obsidian UI lifecycle or desktop/mobile integration
-
-Do not interpret a passing test suite as proof that the full V1 flow works.
+- `AgentOrchestrator` — full loop, tool execution + result fed back, approval required and resolved, rejection prevents execution, unknown tools, abort handling, model/systemPrompt passthrough
+- `GeminiClient` — SSE streaming, `functionCall` streaming, `functionDeclarations` sent, `tool_use`/`tool_result` → `functionCall`/`functionResponse` mapping, HTTP errors
+- `ContextBuilder` — context assembly, truncation, prompt injection
+- `TokenStore` / `GeminiProvider` — storage and auth-state basics
 
 ## Security notes
 
 - Use a disposable/test vault for development.
-- Gemini API keys are currently saved in Obsidian plugin settings (`data.json`) as part of the early settings implementation. Do not share that file or commit it.
-- OAuth login is scaffolding only; do not rely on it or enter credentials into a flow that has not been fully implemented.
-- Keep destructive/write tool testing isolated until approval handling is connected and verified.
+- API keys are stored in the vault's browser storage (`TokenStore`). They are not written to `data.json`. Older versions did persist the Gemini key there — the plugin migrates and strips it on first load after upgrading.
+- OAuth sign-in (OpenAI / Google) is disabled until implemented end-to-end; do not rely on any leftover scaffolding.
+- Write tools are always gated behind an explicit Approve/Reject card. If a write ever happens without the card, report it as a bug.
 
 ## Architecture
 
@@ -95,22 +80,14 @@ Modular monolith; the plugin runs inside Obsidian:
 - `tools/` — vault read/edit/search tools
 - `context/` — current-note context and vault search
 - `obsidian/` — Obsidian API adapter
-- `auth/` — OAuth/token scaffolding
+- `auth/` — token storage and future OAuth
 - `storage/` — plugin settings
-- `ui/` — React components, hook, and view
+- `ui/` — React components, hook, settings tab, and chat view
 
-See [AGENTS.md](./AGENTS.md), [ARCHITECTURE.md](./ARCHITECTURE.md), and [PLAN.md](./PLAN.md) before changing architecture or starting another implementation phase.
+See [AGENTS.md](./AGENTS.md), [ARCHITECTURE.md](./ARCHITECTURE.md) and the [docs/](./docs) folder (plan, review findings, testing guide) before changing architecture or starting another phase.
 
-## Recommended next milestone: V1 integration and hardening
+## Next steps
 
-Before adding more features, finish and verify the full user journey:
-
-1. Register the chat sidebar and “Open Vault Mind” command in `main.ts`.
-2. Connect the chat hook to the selected model, current-note context, and provider settings.
-3. Register read/search/edit tools; connect approval events to a real approval UI. Ensure write tools cannot execute without explicit approval.
-4. Implement the Gemini provider’s actual tool-call mapping and tool-result round trip.
-5. Either implement OAuth end-to-end with real provider credentials/callback/token exchange, or clearly disable/remove the placeholder OAuth controls until ready.
-6. Add automated tests for provider streaming, agent tool calls/approval, vault tools, and settings; add CI for typecheck, lint, tests, and production build.
-7. Test the complete flow in a disposable desktop vault, then separately test Obsidian mobile.
-
-**V1 acceptance test:** open the sidebar → ask about the active note → verify relevant context is included → request a specific edit → inspect the proposed diff → approve → verify only the intended text changed. Rejecting the edit must leave the note unchanged.
+1. Run the manual V1 acceptance test in a disposable desktop vault: open sidebar → ask about the active note → request an edit → reject (verify the note is unchanged) → approve (verify only the intended text changed).
+2. Mobile smoke test.
+3. Then: OpenAI tool calling, end-to-end OAuth or its removal, diff preview in the approval card, session persistence — tracked in [docs/PLAN.md](./docs/PLAN.md), Phase 8.

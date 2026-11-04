@@ -294,3 +294,45 @@ If something was changed from the plan, note it here so the next AI knows.
 - Write/destructive tools need approval
 - One commit per logical change
 - Commit format: feat(scope): summary
+
+---
+
+## Handoff notes (updated after the stabilization pass)
+
+- Phases 1–7 are implemented, and the integration gaps found in review were fixed
+  (for details, see [REVIEW.md](./REVIEW.md)).
+- The Gemini provider now supports the full tool-call round trip, the approval
+  gate is wired to the chat UI, the chat view + command are registered, tools are
+  all registered, the context builder is wired in, and API keys live in the
+  TokenStore instead of data.json.
+- The remaining V1 acceptance test is **manual**: run the flow in a disposable
+  Obsidian vault, following [TESTING.md](./TESTING.md).
+
+---
+
+## Phase 8 — Integration & stabilization (IN PROGRESS)
+
+Fixed in this pass:
+
+1. Typecheck + lint green (`skipLibCheck`, `@types/node`, unused imports, ESLint config)
+2. Chat view, "Open Vault Mind" command and ribbon registered
+3. All tools registered (read/search/edit)
+4. Approval events connected to the chat UI — write tools cannot execute without approval
+5. Context builder wired into every agent prompt
+6. Gemini tool-call mapping + tool-result round trip
+7. API keys moved out of data.json into TokenStore; placeholder OAuth controls removed
+8. Tests for the agent loop, approval gate, unknown tools, and Gemini SSE/tool mapping
+9. GitHub Actions CI for typecheck, lint, tests, and build
+10. Docs folder: plan, review findings, testing guide
+
+Remaining in this phase:
+
+- [ ] Manual V1 acceptance test in a disposable desktop vault (see TESTING.md)
+- [ ] Mobile smoke test
+- [ ] OpenAI provider tool-call mapping (or explicitly keep it text-only)
+- [ ] OAuth implemented end-to-end (or removed from the plan)
+- [ ] Diff preview in the approval card
+- [ ] Session persistence via StorageAdapter
+
+V1 is "done" only after the manual acceptance test passes — automated checks are
+necessary but not sufficient.
