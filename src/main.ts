@@ -4,6 +4,7 @@ import { ToolRegistry } from "@/tools/ToolRegistry";
 import { VaultAdapter } from "@/obsidian/VaultAdapter";
 import { AgentOrchestrator } from "@/core/AgentOrchestrator";
 import { ReadNoteTool } from "@/tools/vault/ReadNote";
+import { GeminiProvider } from "@/providers/gemini/GeminiProvider";
 import type { PlatformCapabilities } from "@/core/types";
 
 export default class VaultMindPlugin extends Plugin {
@@ -30,7 +31,8 @@ export default class VaultMindPlugin extends Plugin {
     // Register built-in tools
     this.toolRegistry.register(ReadNoteTool);
 
-    // TODO: register providers (Gemini, OpenAI) after loading settings
+    // Register providers
+    this.providerRegistry.register(new GeminiProvider());
 
     // TODO: mount UI views
 
