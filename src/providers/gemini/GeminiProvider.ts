@@ -82,7 +82,10 @@ export class GeminiProvider implements AIProvider {
 				if (chunk.functionCall) {
 					yield {
 						type: "tool_call",
-						id: chunk.functionCall.name,
+						// Gemini's functionCall parts carry no stable call id, so mint a
+						// unique one per call; the orchestrator echoes it back in the
+						// matching tool_use / tool_result history blocks.
+						id: crypto.randomUUID(),
 						name: chunk.functionCall.name,
 						arguments: chunk.functionCall.args,
 					};
