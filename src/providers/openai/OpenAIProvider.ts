@@ -1,6 +1,5 @@
 import type { ChatMessage, AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";
 import type { AIProvider } from "@/providers/base/AIProvider";
-import { TokenStore } from "@/auth/TokenStore";
 
 export class OpenAIProvider implements AIProvider {
 	readonly id = "openai";
@@ -14,17 +13,17 @@ export class OpenAIProvider implements AIProvider {
 		corsCompatible: true,
 	};
 
-	private tokenStore = new TokenStore();
+	// Auth is purely credential-driven: the plugin/settings pass the key via
+	// authenticate(). Token persistence stays with the TokenStore (see
+	// PluginStorage / SettingsTab), not with the provider instance.
 	private accessToken?: string;
 
-	constructor() {
-		this.accessToken = this.tokenStore.get(this.id) || undefined;
-	}
-
-	async authenticate(_method: "api_key" | "oauth", credential?: string): Promise<void> {
+	async authenticate(method: "api_key" | "oauth", credential?: string): Promise<void> {
+		if (method !== "api_key") {
+			throw new Error("OpenAI OAuth is not supported yet; use an API key");
+		}
 		if (credential) {
 			this.accessToken = credential;
-			this.tokenStore.set(this.id, credential);
 		} else {
 			throw new Error("Credential required for OpenAI authentication");
 		}
@@ -32,7 +31,7 @@ export class OpenAIProvider implements AIProvider {
 
 	getAuthState(): AuthState {
 		return {
-			method: this.accessToken ? "oauth" : "api_key",
+			method: "api_key",
 			isAuthenticated: !!this.accessToken,
 			token: this.accessToken ? "***" : undefined,
 		};
@@ -40,7 +39,6 @@ export class OpenAIProvider implements AIProvider {
 
 	async logout(): Promise<void> {
 		this.accessToken = undefined;
-		this.tokenStore.clear(this.id);
 	}
 
 	async getModels(): Promise<ModelInfo[]> {
