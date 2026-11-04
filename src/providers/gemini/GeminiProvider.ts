@@ -1,7 +1,7 @@
-import type { AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";
+import type { AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";\nimport type { AIProvider } from "@/providers/base/AIProvider";
 import { GeminiClient, type GeminiFallback } from "./GeminiClient";
 
-export class GeminiProvider {
+export class GeminiProvider implements AIProvider {
   readonly id = "gemini";
   readonly name = "Google Gemini";
   readonly capabilities: ProviderCapabilities = {
