@@ -1,79 +1,176 @@
-import { useState, useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import type VaultMindPlugin from "@/main";
-import type { ChatMessage } from "@/core/types";
+import type { AgentSession, ChatMessage } from "@/core/types";
 import { AgentOrchestrator } from "@/core/AgentOrchestrator";
 
+export interface PendingApproval {
+	tool: string;
+	args: unknown;
+	resolve: (approved: boolean) => void;
+}
+
+type AgentStatus = "idle" | "running" | "waiting_approval" | "error";
+
 export function useAgent(plugin: VaultMindPlugin) {
+	// Display messages only. The agent's real history (incl. tool blocks) lives in the session.
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
-	const [status, setStatus] = useState<"idle" | "running" | "waiting_approval" | "done" | "error">("idle");
-	const [abortController, setAbortController] = useState<AbortController | null>(null);
+	const [status, setStatus] = useState<AgentStatus>("idle");
+	const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
+	const abortRef = useRef<AbortController | null>(null);
+	const sessionRef = useRef<AgentSession | null>(null);
+
+	const pushMessage = useCallback((message: ChatMessage) => {
+		setMessages((prev) => [...prev, message]);
+	}, []);
+
+	const updateLastAssistant = useCallback((content: string) => {
+		setMessages((prev) => {
+			const next = [...prev];
+			if (next.length > 0 && next[next.length - 1].role === "assistant") {
+				next[next.length - 1] = { role: "assistant", content };
+			} else {
+				next.push({ role: "assistant", content });
+			}
+			return next;
+		});
+	}, []);
 
 	const sendMessage = useCallback(
 		async (text: string) => {
-			const provider = plugin.providerRegistry.get(plugin.settings?.selectedProviderId || "gemini");
-			if (!provider) {
-				setMessages((prev) => [...prev, { role: "assistant", content: "Error: No AI provider registered." }]);
+			if (!plugin.settings) return;
+
+			const providerId = plugin.settings.selectedProviderId || "gemini";
+			let provider;
+			try {
+				provider = plugin.providerRegistry.get(providerId);
+			} catch {
+				pushMessage({ role: "assistant", content: "Error: No AI provider registered." });
+				setStatus("error");
 				return;
 			}
 
-			// Configure provider api key from settings if present
-			if (plugin.settings?.geminiApiKey) {
-				await provider.authenticate("api_key", plugin.settings.geminiApiKey);
+			const key = plugin.tokenStore.get(providerId);
+			if (!key) {
+				pushMessage({
+					role: "assistant",
+					content: `Error: No API key configured for ${provider.name}. Add one in Settings → Vault Mind.`,
+				});
+				setStatus("error");
+				return;
 			}
+			await provider.authenticate("api_key", key);
+
+			// Session persists across sends so the agent has full conversation history.
+			if (!sessionRef.current) {
+				sessionRef.current = {
+					id: Date.now().toString(),
+					createdAt: Date.now(),
+					updatedAt: Date.now(),
+					messages: [],
+					status: "idle",
+				};
+			}
+			const session = sessionRef.current;
+
+			// Vault context → system prompt (active note + selection)
+			let systemPrompt: string | undefined;
+			try {
+				const context = await plugin.contextBuilder.buildContext();
+				systemPrompt = plugin.contextBuilder.injectSystemPrompt(context);
+			} catch {
+				// Context is best-effort; chat still works without it
+			}
+
+			// Optimistic user bubble (orchestrator pushes the message into session history itself)
+			pushMessage({ role: "user", content: text });
+			setStatus("running");
 
 			const orchestrator = new AgentOrchestrator(provider, plugin.toolRegistry, plugin.vaultAdapter);
 			const controller = new AbortController();
-			setAbortController(controller);
+			abortRef.current = controller;
 
-			const session = {
-				id: Date.now().toString(),
-				createdAt: Date.now(),
-				updatedAt: Date.now(),
-				messages: [...messages],
-				status: "running" as const,
+			let assistantContent = "";
+
+			const flush = () => {
+				assistantContent = "";
 			};
 
-			// Optimistically add user message
-			const newMessages = [...messages, { role: "user" as const, content: text }];
-			setMessages(newMessages);
-			session.messages = newMessages;
-			setStatus("running");
-
 			try {
-				const stream = orchestrator.run(text, session, controller.signal);
-				let assistantContent = "";
+				const stream = orchestrator.run(text, session, controller.signal, {
+					model: plugin.settings.selectedModel,
+					systemPrompt,
+				});
 
 				for await (const event of stream) {
-					if (event.type === "response") {
-						assistantContent += event.content;
-						setMessages([...newMessages, { role: "assistant", content: assistantContent }]);
-					} else if (event.type === "error") {
-						setMessages([...newMessages, { role: "assistant", content: `Error: ${event.message}` }]);
-						setStatus("error");
-						break;
-					} else if (event.type === "done") {
-						setStatus("idle");
+					switch (event.type) {
+						case "response":
+							assistantContent += event.content;
+							updateLastAssistant(assistantContent);
+							break;
+
+						case "tool_started":
+							flush();
+							pushMessage({ role: "assistant", content: `⚙ Using tool: ${event.tool}` });
+							break;
+
+						case "approval_required":
+							setStatus("waiting_approval");
+							setPendingApproval({
+								tool: event.tool,
+								args: event.args,
+								resolve: (approved: boolean) => {
+									setPendingApproval(null);
+									setStatus("running");
+									event.resolve(approved);
+								},
+							});
+							break;
+
+						case "error":
+							flush();
+							pushMessage({ role: "assistant", content: `Error: ${event.message}` });
+							setStatus("error");
+							break;
+
+						case "done":
+							flush();
+							setStatus("idle");
+							break;
+
+						default:
+							break;
 					}
 				}
-			} catch (err: any) {
+			} catch (err: unknown) {
 				if (!controller.signal.aborted) {
-					setMessages([...newMessages, { role: "assistant", content: `Error: ${err.message || String(err)}` }]);
+					const message = err instanceof Error ? err.message : String(err);
+					pushMessage({ role: "assistant", content: `Error: ${message}` });
 					setStatus("error");
 				}
 			} finally {
-				setAbortController(null);
+				abortRef.current = null;
+				session.updatedAt = Date.now();
+				setStatus((current) => (current === "running" ? "idle" : current));
 			}
 		},
-		[plugin, messages]
+		[plugin, pushMessage, updateLastAssistant],
 	);
 
 	const cancel = useCallback(() => {
-		if (abortController) {
-			abortController.abort();
-			setAbortController(null);
-			setStatus("idle");
+		abortRef.current?.abort();
+		abortRef.current = null;
+		if (pendingApproval) {
+			setPendingApproval(null);
 		}
-	}, [abortController]);
+		setStatus("idle");
+	}, [pendingApproval]);
 
-	return { messages, status, sendMessage, cancel };
+	const resolveApproval = useCallback((approved: boolean) => {
+		setPendingApproval((pending) => {
+			pending?.resolve(approved);
+			return null;
+		});
+	}, []);
+
+	return { messages, status, pendingApproval, sendMessage, cancel, resolveApproval };
 }
