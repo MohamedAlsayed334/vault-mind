@@ -122,13 +122,13 @@ describe("AgentOrchestrator", () => {
 
 		await runWithApproval(
 			orchestrator.run("summarize", session(), new AbortController().signal, {
-				model: "gemini-2.0-flash",
+				model: "gemini-3.8-flash",
 				systemPrompt: "note content",
 			}),
 			true,
 		);
 
-		expect(provider.requests[0].model).toBe("gemini-2.0-flash");
+		expect(provider.requests[0].model).toBe("gemini-3.8-flash");
 		expect(provider.requests[0].systemPrompt).toBe("note content");
 	});
 

@@ -58,8 +58,9 @@ export class SettingsTab extends PluginSettingTab {
 				.setDesc("Select the Gemini model to use.")
 				.addDropdown((dropdown) =>
 					dropdown
-						.addOption("gemini-2.0-flash", "Gemini 2.0 Flash")
-						.addOption("gemini-1.5-pro", "Gemini 1.5 Pro")
+						.addOption("gemini-3.8-flash", "Gemini 3.8 Flash")
+						.addOption("gemini-3.6-flash", "Gemini 3.6 Flash")
+						.addOption("gemini-4-argon", "Gemini 4 Argon")
 						.setValue(this.plugin.settings.selectedModel)
 						.onChange(async (value) => {
 							this.plugin.settings.selectedModel = value;

@@ -43,8 +43,8 @@ describe("GeminiProvider", () => {
 	it("should return correct models", async () => {
 		const provider = new GeminiProvider();
 		const models = await provider.getModels();
-		expect(models.length).toBe(2);
-		expect(models[0].id).toBe("gemini-2.0-flash");
+		expect(models.length).toBe(3);
+		expect(models[0].id).toBe("gemini-3.8-flash");
 	});
 
 	it("should yield unique tool_call ids even for repeated tool names", async () => {
@@ -56,7 +56,7 @@ describe("GeminiProvider", () => {
 
 		const events = [];
 		for await (const event of provider.generate({
-			model: "gemini-2.0-flash",
+			model: "gemini-3.8-flash",
 			messages: [{ role: "user", content: "read both" }],
 		})) {
 			events.push(event);

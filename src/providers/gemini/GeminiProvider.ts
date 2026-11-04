@@ -40,17 +40,25 @@ export class GeminiProvider implements AIProvider {
 	async getModels(): Promise<ModelInfo[]> {
 		return [
 			{
-				id: "gemini-2.0-flash",
-				name: "Gemini 2.0 Flash",
+				id: "gemini-3.8-flash",
+				name: "Gemini 3.8 Flash",
 				contextWindow: 1048576,
 				supportsTools: true,
 				supportsStreaming: true,
 				supportsVision: true,
 			},
 			{
-				id: "gemini-1.5-pro",
-				name: "Gemini 1.5 Pro",
-				contextWindow: 2097152,
+				id: "gemini-3.6-flash",
+				name: "Gemini 3.6 Flash",
+				contextWindow: 1048576,
+				supportsTools: true,
+				supportsStreaming: true,
+				supportsVision: true,
+			},
+			{
+				id: "gemini-4-argon",
+				name: "Gemini 4 Argon",
+				contextWindow: 1048576,
 				supportsTools: true,
 				supportsStreaming: true,
 				supportsVision: true,
@@ -64,8 +72,10 @@ export class GeminiProvider implements AIProvider {
 			return;
 		}
 
-		const model = request.model || "gemini-2.0-flash";
-		
+		// Stable Flash-class fallback; deprecated ids (e.g. gemini-2.0-flash) 404
+		// in production and reference models newer Gemini ones auto-route to.
+		const model = request.model || "gemini-3.8-flash";
+
 		try {
 			const stream = this.client.streamGenerateContent({
 				model,

@@ -46,17 +46,17 @@ export class OpenAIProvider implements AIProvider {
 	async getModels(): Promise<ModelInfo[]> {
 		return [
 			{
-				id: "gpt-4o",
-				name: "GPT-4o",
-				contextWindow: 128000,
+				id: "gpt-6.1-sol",
+				name: "GPT-6.1 Sol",
+				contextWindow: 1050000,
 				supportsTools: true,
 				supportsStreaming: true,
 				supportsVision: true,
 			},
 			{
-				id: "gpt-4o-mini",
-				name: "GPT-4o Mini",
-				contextWindow: 128000,
+				id: "gpt-6-luna",
+				name: "GPT-6 Luna",
+				contextWindow: 1050000,
 				supportsTools: true,
 				supportsStreaming: true,
 				supportsVision: true,
@@ -70,7 +70,7 @@ export class OpenAIProvider implements AIProvider {
 			return;
 		}
 
-		const model = request.model || "gpt-4o-mini";
+		const model = request.model || "gpt-6-luna";
 		const url = "https://api.openai.com/v1/chat/completions";
 
 		const messages = request.messages.map((m: ChatMessage) => ({

@@ -37,7 +37,7 @@ describe("GeminiClient", () => {
 	it("throws when no API key is set", async () => {
 		const client = new GeminiClient();
 		await expect(async () => {
-			for await (const _ of client.streamGenerateContent({ model: "gemini-2.0-flash", messages: [] })) {
+			for await (const _ of client.streamGenerateContent({ model: "gemini-3.8-flash", messages: [] })) {
 				// consume
 			}
 		}).rejects.toThrow("API key not set");
@@ -52,7 +52,7 @@ describe("GeminiClient", () => {
 
 		const chunks = [];
 		for await (const chunk of client.streamGenerateContent({
-			model: "gemini-2.0-flash",
+			model: "gemini-3.8-flash",
 			messages: [{ role: "user", content: "hi" }],
 		})) {
 			chunks.push(chunk);
@@ -70,7 +70,7 @@ describe("GeminiClient", () => {
 
 		const chunks = [];
 		for await (const chunk of client.streamGenerateContent({
-			model: "gemini-2.0-flash",
+			model: "gemini-3.8-flash",
 			messages: [{ role: "user", content: "read note a" }],
 		})) {
 			chunks.push(chunk);
@@ -89,7 +89,7 @@ describe("GeminiClient", () => {
 		client.setApiKey("secret-key-123");
 
 		for await (const _ of client.streamGenerateContent({
-			model: "gemini-2.0-flash",
+			model: "gemini-3.8-flash",
 			messages: [{ role: "user", content: "hi" }],
 		})) {
 			// consume
@@ -108,7 +108,7 @@ describe("GeminiClient", () => {
 		client.setApiKey("test-key");
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		for await (const _ of client.streamGenerateContent({
-			model: "gemini-2.0-flash",
+			model: "gemini-3.8-flash",
 			messages: [{ role: "user", content: "hi" }],
 			tools: [
 				{
@@ -137,7 +137,7 @@ describe("GeminiClient", () => {
 		client.setApiKey("test-key");
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		for await (const _ of client.streamGenerateContent({
-			model: "gemini-2.0-flash",
+			model: "gemini-3.8-flash",
 			messages: [
 				{ role: "user", content: "read it" },
 				{
@@ -185,7 +185,7 @@ describe("GeminiClient", () => {
 
 		await expect(async () => {
 			for await (const _ of client.streamGenerateContent({
-				model: "gemini-2.0-flash",
+				model: "gemini-3.8-flash",
 				messages: [{ role: "user", content: "hi" }],
 			})) {
 				// consume

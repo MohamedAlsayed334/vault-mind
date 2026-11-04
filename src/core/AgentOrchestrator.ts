@@ -6,7 +6,7 @@ import type { AgentEvent, AgentSession, ContentBlock } from "./types";
 const MAX_ITERATIONS = 20;
 
 export interface OrchestratorOptions {
-	/** Model id, e.g. "gemini-2.0-flash". Provider resolves a default when omitted. */
+	/** Model id, e.g. "gemini-3.8-flash". Provider resolves a default when omitted. */
 	model?: string;
 	/** Assembled vault context injected as the system prompt. */
 	systemPrompt?: string;

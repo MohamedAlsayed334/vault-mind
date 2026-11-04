@@ -8,7 +8,7 @@ export interface VaultMindSettings {
 
 export const DEFAULT_SETTINGS: VaultMindSettings = {
 	selectedProviderId: "gemini",
-	selectedModel: "gemini-2.0-flash",
+	selectedModel: "gemini-3.8-flash",
 };
 
 /**
