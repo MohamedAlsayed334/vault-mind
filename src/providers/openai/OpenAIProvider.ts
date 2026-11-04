@@ -64,6 +64,26 @@ export class OpenAIProvider implements AIProvider {
 		},
 	];
 
+	/**
+	 * Minimal honest probe for the settings test-connection button. Unlike
+	 * getModels() it reports failure instead of falling back silently, so a
+	 * wrong key shows an error rather than a passing list.
+	 */
+	static async checkConnection(apiKey: string): Promise<void> {
+		const res = await fetch("https://api.openai.com/v1/models", {
+			method: "GET",
+			headers: { Authorization: `Bearer ${apiKey}` },
+			signal: AbortSignal.timeout(10_000),
+		});
+		if (!res.ok) {
+			throw new Error(`OpenAI API error (${res.status})`);
+		}
+		const data = await res.json();
+		if (!data || !Array.isArray(data.data)) {
+			throw new Error("Unexpected response from OpenAI models endpoint");
+		}
+	}
+
 	async getModels(): Promise<ModelInfo[]> {
 		if (!this.accessToken) {
 			return OpenAIProvider.fallbackModels;

@@ -68,6 +68,27 @@ export class GeminiProvider implements AIProvider {
 		this.client.setApiKey("");
 	}
 
+	/**
+	 * Minimal honest probe for the settings test-connection button. Unlike
+	 * getModels() it reports failure instead of falling back silently, so a
+	 * wrong key shows an error rather than a passing list.
+	 */
+	static async checkConnection(apiKey: string): Promise<void> {
+		const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+			method: "GET",
+			// Auth via header keeps the key out of URLs (which end up in logs/proxies).
+			headers: { "x-goog-api-key": apiKey },
+			signal: AbortSignal.timeout(10_000),
+		});
+		if (!res.ok) {
+			throw new Error(`Gemini API error (${res.status})`);
+		}
+		const data = await res.json();
+		if (!data || !Array.isArray(data.models)) {
+			throw new Error("Unexpected response from Gemini models endpoint");
+		}
+	}
+
 	async getModels(): Promise<ModelInfo[]> {
 		if (!this.apiKey) {
 			return GeminiProvider.fallbackModels;
