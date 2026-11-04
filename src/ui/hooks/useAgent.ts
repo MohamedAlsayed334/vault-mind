@@ -17,6 +17,7 @@ export function useAgent(plugin: VaultMindPlugin) {
 	const [status, setStatus] = useState<AgentStatus>("idle");
 	const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
 	const abortRef = useRef<AbortController | null>(null);
+	const pendingApprovalRef = useRef<PendingApproval | null>(null);
 	const sessionRef = useRef<AgentSession | null>(null);
 
 	const pushMessage = useCallback((message: ChatMessage) => {
@@ -113,18 +114,32 @@ export function useAgent(plugin: VaultMindPlugin) {
 							pushMessage({ role: "assistant", content: `⚙ Using tool: ${event.tool}` });
 							break;
 
-						case "approval_required":
+						case "approval_required": {
 							setStatus("waiting_approval");
-							setPendingApproval({
+							// Once-only resolver: resolving twice (e.g. cancel racing a click)
+							// must not double-fire the orchestrator's resolver.
+							let resolved = false;
+							const oneTimeResolve = (approved: boolean) => {
+								if (resolved) return;
+								resolved = true;
+								event.resolve(approved);
+							};
+							const pending: PendingApproval = {
 								tool: event.tool,
 								args: event.args,
 								resolve: (approved: boolean) => {
+									pendingApprovalRef.current = null;
 									setPendingApproval(null);
 									setStatus("running");
-									event.resolve(approved);
+									oneTimeResolve(approved);
 								},
-							});
+							};
+							// Ref mirrors the state so cancel() can reach the resolver
+							// without waiting for a re-render.
+							pendingApprovalRef.current = pending;
+							setPendingApproval(pending);
 							break;
+						}
 
 						case "error":
 							flush();
@@ -159,15 +174,23 @@ export function useAgent(plugin: VaultMindPlugin) {
 	const cancel = useCallback(() => {
 		abortRef.current?.abort();
 		abortRef.current = null;
-		if (pendingApproval) {
+		// Unblock the orchestrator: it awaits the resolver even though the
+		// provider stream was aborted — resolving false lets the loop finish.
+		const pending = pendingApprovalRef.current;
+		if (pending) {
+			pendingApprovalRef.current = null;
 			setPendingApproval(null);
+			pending.resolve(false);
 		}
 		setStatus("idle");
-	}, [pendingApproval]);
+	}, []);
 
 	const resolveApproval = useCallback((approved: boolean) => {
 		setPendingApproval((pending) => {
-			pending?.resolve(approved);
+			if (pending) {
+				pendingApprovalRef.current = null;
+				pending.resolve(approved);
+			}
 			return null;
 		});
 	}, []);
