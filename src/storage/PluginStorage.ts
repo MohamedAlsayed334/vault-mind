@@ -12,6 +12,23 @@ export const DEFAULT_SETTINGS: VaultMindSettings = {
 };
 
 /**
+ * Model ids Google has shut down — they 404 in production
+ * (e.g. the 2.0 family died on June 1, 2026; the 1.5 family long before).
+ * Reset on load so users of old builds don't send requests to dead models.
+ */
+const DEAD_MODEL_IDS: string[] = [
+	"gemini-1.5-pro",
+	"gemini-1.5-pro-002",
+	"gemini-1.5-flash",
+	"gemini-1.5-flash-002",
+	"gemini-1.5-flash-8b",
+	"gemini-2.0-flash",
+	"gemini-2.0-flash-001",
+	"gemini-2.0-flash-lite",
+	"gemini-2.0-flash-lite-001",
+];
+
+/**
  * Settings (non-sensitive) live in data.json.
  * API keys / tokens never persist here — they are moved to TokenStore on load.
  */
@@ -31,6 +48,12 @@ export class PluginStorage {
 
 		const settings = Object.assign({}, DEFAULT_SETTINGS, data);
 		delete (settings as { geminiApiKey?: string }).geminiApiKey;
+
+		// Migration: dead default model ids (shut-down models) must not be sent
+		// to the API — reset to the current default.
+		if (DEAD_MODEL_IDS.includes(settings.selectedModel)) {
+			settings.selectedModel = DEFAULT_SETTINGS.selectedModel;
+		}
 		return settings;
 	}
 
