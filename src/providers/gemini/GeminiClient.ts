@@ -45,6 +45,10 @@ export class GeminiClient {
       yield* this.readSse(response.body, request.signal);
       return;
     } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Gemini API ")) {
+        yield { type: "error", message: error.message };
+        return;
+      }
       if (request.signal?.aborted) {
         yield { type: "error", message: "Request cancelled" };
         return;
@@ -69,8 +73,16 @@ export class GeminiClient {
 
   private buildRequest(request: AIRequest): Record<string, unknown> {
     const contents: GeminiContent[] = [];
+    const toolNames = new Map<string, string>();
     for (const message of request.messages) {
-      const parts = this.messageParts(message);
+      if (Array.isArray(message.content)) {
+        for (const block of message.content) {
+          if (block.type === "tool_use") toolNames.set(block.id, block.name);
+        }
+      }
+    }
+    for (const message of request.messages) {
+      const parts = this.messageParts(message, toolNames);
       if (!parts.length) continue;
       const role = message.role === "assistant" ? "model" : "user";
       contents.push({ role, parts });
