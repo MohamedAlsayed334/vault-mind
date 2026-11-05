@@ -1,12 +1,12 @@
 import { Plugin } from "obsidian";
 import { TokenStore } from "@/auth/TokenStore";
 
-export interface VaultMindSettings {
+export interface VaultCompassSettings {
 	selectedProviderId: string;
 	selectedModel: string;
 }
 
-export const DEFAULT_SETTINGS: VaultMindSettings = {
+export const DEFAULT_SETTINGS: VaultCompassSettings = {
 	selectedProviderId: "gemini",
 	selectedModel: "gemini-3.8-flash",
 };
@@ -35,8 +35,8 @@ const DEAD_MODEL_IDS: string[] = [
 export class PluginStorage {
 	constructor(private plugin: Plugin, private tokenStore: TokenStore) {}
 
-	async loadSettings(): Promise<VaultMindSettings> {
-		const data = (await this.plugin.loadData()) as (VaultMindSettings & { geminiApiKey?: string }) | null;
+	async loadSettings(): Promise<VaultCompassSettings> {
+		const data = (await this.plugin.loadData()) as (VaultCompassSettings & { geminiApiKey?: string }) | null;
 
 		// Migration: older builds stored the API key in data.json. Move it to the TokenStore
 		// and strip it from disk permanently.
@@ -57,7 +57,7 @@ export class PluginStorage {
 		return settings;
 	}
 
-	async saveSettings(settings: VaultMindSettings): Promise<void> {
+	async saveSettings(settings: VaultCompassSettings): Promise<void> {
 		await this.plugin.saveData(settings);
 	}
 }

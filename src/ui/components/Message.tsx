@@ -27,8 +27,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 	// Compact chip row for tool activity — not a full chat bubble.
 	if (!isUser && isToolLine(text)) {
 		return (
-			<div className="vault-mind-msg vault-mind-msg--assistant">
-				<span className="vault-mind-tool-chip">{text}</span>
+			<div className="vault-compass-msg vault-compass-msg--assistant">
+				<span className="vault-compass-tool-chip">{text}</span>
 			</div>
 		);
 	}
@@ -36,15 +36,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 	// Errors: small plain line, no bubble.
 	if (!isUser && text.startsWith("Error:")) {
 		return (
-			<div className="vault-mind-msg vault-mind-msg--assistant">
-				<span className="vault-mind-error-line">{text}</span>
+			<div className="vault-compass-msg vault-compass-msg--assistant">
+				<span className="vault-compass-error-line">{text}</span>
 			</div>
 		);
 	}
 
 	return (
-		<div className={`vault-mind-msg ${isUser ? "vault-mind-msg--user" : "vault-mind-msg--assistant"}`}>
-			<div className={`vault-mind-bubble ${isUser ? "vault-mind-bubble--user" : "vault-mind-bubble--assistant"}`}>
+		<div className={`vault-compass-msg ${isUser ? "vault-compass-msg--user" : "vault-compass-msg--assistant"}`}>
+			<div className={`vault-compass-bubble ${isUser ? "vault-compass-bubble--user" : "vault-compass-bubble--assistant"}`}>
 				{text}
 			</div>
 		</div>

@@ -1,4 +1,4 @@
-# Vault Mind — Testing Guide
+# Vault Compass — Testing Guide
 
 How to verify the plugin locally. Everything below assumes the automated checks
 already pass:
@@ -17,20 +17,20 @@ npm run build
 
 1. Run `npm run build`. This produces `main.js` and `styles.css` in the repository root.
 2. Create the plugin directory inside the test vault:
-   `.obsidian/plugins/vault-mind/`
+   `.obsidian/plugins/vault-compass/`
 3. Copy these files from the repository root into that directory:
    - `main.js`
    - `styles.css`
    - `manifest.json`
    - `versions.json`
 4. Open the test vault in Obsidian → **Settings → Community plugins**.
-   Enable "Restricted mode" off if needed, reload plugins, and enable **Vault Mind**.
+   Enable "Restricted mode" off if needed, reload plugins, and enable **Vault Compass**.
 5. If it does not appear, restart Obsidian and check the developer console
    (`Ctrl+Shift+I` on desktop) for errors.
 
 ## 2. Configure
 
-1. Open **Settings → Vault Mind**.
+1. Open **Settings → Vault Compass**.
 2. Choose the provider (Gemini recommended; OpenAI is API key-only and text-only for now).
 3. Enter your Gemini API key. It is stored in the vault's browser storage
    (`TokenStore`), **not** in `data.json`.
@@ -38,7 +38,7 @@ npm run build
 
 ## 3. Smoke test the chat
 
-1. Click the Vault Mind ribbon icon (or run the command **Open Vault Mind**
+1. Click the Vault Compass ribbon icon (or run the command **Open Vault Compass**
    from the command palette). The chat sidebar opens.
 2. Open any note in the vault, then ask:
 

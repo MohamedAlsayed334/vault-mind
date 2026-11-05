@@ -1,12 +1,12 @@
-# Vault Mind
+# Vault Compass
 
-Vault Mind is an Obsidian plugin for AI-assisted note work: an agent with a reasoning loop, vault tool execution (read / search / edit), and an approval gate for every write. Desktop + mobile.
+Vault Compass is an Obsidian plugin for AI-assisted note work: an agent with a reasoning loop, vault tool execution (read / search / edit), and an approval gate for every write. Desktop + mobile.
 
 The V1 implementation phases (1–8) are recorded in [docs/PLAN.md](./docs/PLAN.md). Phases 1–7 are implemented, and the integration gaps found in the November 2026 reviews (rounds 1 and 2) have been fixed — see [docs/REVIEW.md](./docs/REVIEW.md).
 
 ## What works now
 
-- Chat sidebar (ribbon icon or **Open Vault Mind** command) with streaming responses, a composer pinned to the bottom (Enter to send, Shift+Enter for a newline), an empty state with suggested prompts, and a compact approval card for write actions
+- Chat sidebar (ribbon icon or **Open Vault Compass** command) with streaming responses, a composer pinned to the bottom (Enter to send, Shift+Enter for a newline), an empty state with suggested prompts, and a compact approval card for write actions
 - Agent loop with tool calling: `read_note`, `search_vault`, `edit_note`
 - Approval gate: `edit_note` shows an Approve/Reject card and never writes without explicit approval
 - Vault context: the active note and your current selection are included automatically
@@ -46,15 +46,15 @@ This starts esbuild watch mode.
 **Use a separate Obsidian test vault. Do not test note-editing tools against your real vault.**
 
 1. Run `npm run build`.
-2. Create the plugin directory inside the test vault: `.obsidian/plugins/vault-mind/`
+2. Create the plugin directory inside the test vault: `.obsidian/plugins/vault-compass/`
 3. Copy these files from the repository root into that directory:
    - `main.js`
    - `styles.css`
    - `manifest.json`
    - `versions.json`
-4. In Obsidian, open **Settings → Community plugins** and enable Vault Mind. If it does not appear, restart Obsidian and check the developer console for errors.
-5. Open **Settings → Vault Mind**, choose a provider, enter your API key, and pick a model.
-6. Click the Vault Mind ribbon icon (or run **Open Vault Mind** from the command palette) to open the chat sidebar.
+4. In Obsidian, open **Settings → Community plugins** and enable Vault Compass. If it does not appear, restart Obsidian and check the developer console for errors.
+5. Open **Settings → Vault Compass**, choose a provider, enter your API key, and pick a model.
+6. Click the Vault Compass ribbon icon (or run **Open Vault Compass** from the command palette) to open the chat sidebar.
 
 The full manual test script — chat smoke test, read/search tools, the write-approval gate, cancellation, persistence, and a mobile checklist — lives in [docs/TESTING.md](./docs/TESTING.md).
 
@@ -70,7 +70,7 @@ The full manual test script — chat smoke test, read/search tools, the write-ap
 - Use a disposable/test vault for development.
 - API keys are stored in the vault's browser storage (`TokenStore` — Obsidian's `localStorage`). This is plain browser storage, **not** encrypted secret storage — anyone with access to that vault's data and this machine's user account can read the keys. Keys are never written to `data.json`. Older versions did persist the Gemini key there — the plugin migrates and strips it on first load after upgrading.
 - The Gemini key is sent as a request header, not in the request URL, so it does not end up in proxy/server logs or browser history.
-- **Your note content is sent to the selected AI provider.** The active note and your current text selection are included as context in every prompt. Do not use Vault Mind on notes containing secrets you are not willing to share with your AI provider.
+- **Your note content is sent to the selected AI provider.** The active note and your current text selection are included as context in every prompt. Do not use Vault Compass on notes containing secrets you are not willing to share with your AI provider.
 - OAuth sign-in (OpenAI / Google) is disabled until implemented end-to-end; do not rely on any leftover scaffolding.
 - Write tools are always gated behind an explicit Approve/Reject card. If a write ever happens without the card, report it as a bug.
 

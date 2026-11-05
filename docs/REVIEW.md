@@ -1,4 +1,4 @@
-# Vault Mind — Code Review (November 2026)
+# Vault Compass — Code Review (November 2026)
 
 A review of the state after Phases 1–7, followed by the stabilization pass that
 fixed the findings. This file records what was found, what was fixed, and what
@@ -10,7 +10,7 @@ remains open.
 
 | # | Priority | Issue | Status |
 |---|----------|-------|--------|
-| 1 | Critical | `main.ts` never registered the chat view, the "Open Vault Mind" command, or a ribbon icon — the chat UI was unreachable from Obsidian | ✅ Fixed |
+| 1 | Critical | `main.ts` never registered the chat view, the "Open Vault Compass" command, or a ribbon icon — the chat UI was unreachable from Obsidian | ✅ Fixed |
 | 2 | Critical | `main.ts` registered only `ReadNoteTool`; edit and search tools were never available to the agent | ✅ Fixed |
 | 3 | Critical | `AgentOrchestrator` waited for approval through a listener list nobody subscribed to, so write tools could hang forever | ✅ Fixed — the orchestrator now yields an `approval_required` AgentEvent and the chat UI resolves it (Approve/Reject buttons) |
 | 4 | Critical | `ContextBuilder` was not connected to the chat flow, and its selection logic (`getActiveViewOfType(...)`) was broken | ✅ Fixed — rebuilt on `VaultAdapter`, wired into `useAgent` so every prompt carries the active note + selection as the system prompt |

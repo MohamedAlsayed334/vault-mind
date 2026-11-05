@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type VaultMindPlugin from "@/main";
+import type VaultCompassPlugin from "@/main";
 import type { AgentSession, ChatMessage } from "@/core/types";
 import { AgentOrchestrator } from "@/core/AgentOrchestrator";
 
@@ -11,7 +11,7 @@ export interface PendingApproval {
 
 type AgentStatus = "idle" | "running" | "waiting_approval" | "error";
 
-export function useAgent(plugin: VaultMindPlugin) {
+export function useAgent(plugin: VaultCompassPlugin) {
 	// Display messages only. The agent's real history (incl. tool blocks) lives in the session.
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [status, setStatus] = useState<AgentStatus>("idle");
@@ -54,7 +54,7 @@ export function useAgent(plugin: VaultMindPlugin) {
 			if (!key) {
 				pushMessage({
 					role: "assistant",
-					content: `Error: No API key configured for ${provider.name}. Add one in Settings → Vault Mind.`,
+					content: `Error: No API key configured for ${provider.name}. Add one in Settings → Vault Compass.`,
 				});
 				setStatus("error");
 				return;

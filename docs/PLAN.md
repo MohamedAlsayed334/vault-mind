@@ -1,4 +1,4 @@
-# Vault Mind — V1 Development Plan
+# Vault Compass — V1 Development Plan
 
 This is the single source of truth for building V1.
 Any AI agent working on this must read AGENTS.md and ARCHITECTURE.md first,
@@ -94,7 +94,7 @@ src/ui/settings/SettingsTab.tsx  (extends Obsidian PluginSettingTab)
 
 Settings stored in data.json via loadData/saveData (settings only, never tokens or history):
 ```ts
-interface VaultMindSettings {
+interface VaultCompassSettings {
   selectedProviderId: string   // 'gemini'
   selectedModel: string        // 'gemini-2.0-flash'
   geminiApiKey: string         // stored here for now, Phase 4 moves it to TokenStore
@@ -121,7 +121,7 @@ src/ui/styles/chat.css
 ```
 
 ChatView registered in main.ts as a right-sidebar leaf.
-Command added: "Open Vault Mind" to show the sidebar.
+Command added: "Open Vault Compass" to show the sidebar.
 
 Chat behavior:
 - User types message, hits Enter or Send
@@ -315,7 +315,7 @@ If something was changed from the plan, note it here so the next AI knows.
 Fixed in this pass:
 
 1. Typecheck + lint green (`skipLibCheck`, `@types/node`, unused imports, ESLint config)
-2. Chat view, "Open Vault Mind" command and ribbon registered
+2. Chat view, "Open Vault Compass" command and ribbon registered
 3. All tools registered (read/search/edit)
 4. Approval events connected to the chat UI — write tools cannot execute without approval
 5. Context builder wired into every agent prompt

@@ -1,11 +1,11 @@
-/* Vault Mind chat UI.
+/* Vault Compass chat UI.
    Uses Obsidian theme variables only so the chat follows the active theme.
    esbuild emits this file as styles.css next to main.js, which Obsidian loads
    automatically — no runtime injection needed. */
 
 /* ─── Layout: messages scroll area on top, composer pinned to the bottom ──── */
 
-.vault-mind-chat-container {
+.vault-compass-chat-container {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
@@ -13,21 +13,21 @@
 	padding: var(--size-4-2);
 }
 
-.vault-mind-chat-mount {
+.vault-compass-chat-mount {
 	display: flex;
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
 }
 
-.vault-mind-chat {
+.vault-compass-chat {
 	display: flex;
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
 }
 
-.vault-mind-messages {
+.vault-compass-messages {
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
@@ -36,21 +36,21 @@
 
 /* ─── Messages ────────────────────────────────────────────────────────────── */
 
-.vault-mind-msg {
+.vault-compass-msg {
 	display: flex;
 	flex-direction: column;
 	margin-bottom: var(--size-4-3);
 }
 
-.vault-mind-msg--user {
+.vault-compass-msg--user {
 	align-items: flex-end;
 }
 
-.vault-mind-msg--assistant {
+.vault-compass-msg--assistant {
 	align-items: flex-start;
 }
 
-.vault-mind-bubble {
+.vault-compass-bubble {
 	max-width: 88%;
 	padding: var(--size-2-3) var(--size-4-2);
 	white-space: pre-wrap;
@@ -58,7 +58,7 @@
 	line-height: 1.55;
 }
 
-.vault-mind-bubble--user {
+.vault-compass-bubble--user {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
 	border-radius: var(--radius-m);
@@ -66,13 +66,13 @@
 }
 
 /* Assistant responses: plain text, no bubble — reads like a document */
-.vault-mind-bubble--assistant {
+.vault-compass-bubble--assistant {
 	color: var(--text-normal);
 	font-size: var(--font-ui-medium);
 	border-radius: var(--radius-m);
 }
 
-.vault-mind-error-line {
+.vault-compass-error-line {
 	color: var(--text-error);
 	font-size: var(--font-ui-small);
 	white-space: pre-wrap;
@@ -81,7 +81,7 @@
 }
 
 /* Tool activity: compact muted chip rows, not full bubbles */
-.vault-mind-tool-chip {
+.vault-compass-tool-chip {
 	display: inline-flex;
 	align-items: center;
 	padding: var(--size-2-1) var(--size-2-2);
@@ -95,31 +95,31 @@
 
 /* ─── Streaming typing indicator (subtle, respects reduced motion) ────────── */
 
-.vault-mind-typing {
+.vault-compass-typing {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--size-2-1);
 	padding: var(--size-2-2) 0;
 }
 
-.vault-mind-typing-dot {
+.vault-compass-typing-dot {
 	width: 6px;
 	height: 6px;
 	border-radius: 50%;
 	background: var(--text-muted);
 	opacity: 0.35;
-	animation: vault-mind-typing-bounce 1.2s ease-in-out infinite;
+	animation: vault-compass-typing-bounce 1.2s ease-in-out infinite;
 }
 
-.vault-mind-typing-dot:nth-child(2) {
+.vault-compass-typing-dot:nth-child(2) {
 	animation-delay: 0.15s;
 }
 
-.vault-mind-typing-dot:nth-child(3) {
+.vault-compass-typing-dot:nth-child(3) {
 	animation-delay: 0.3s;
 }
 
-@keyframes vault-mind-typing-bounce {
+@keyframes vault-compass-typing-bounce {
 	0%,
 	60%,
 	100% {
@@ -133,7 +133,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.vault-mind-typing-dot {
+	.vault-compass-typing-dot {
 		animation: none;
 		opacity: 0.6;
 	}
@@ -141,7 +141,7 @@
 
 /* ─── Empty state ─────────────────────────────────────────────────────────── */
 
-.vault-mind-empty {
+.vault-compass-empty {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -153,21 +153,21 @@
 	color: var(--text-muted);
 }
 
-.vault-mind-empty__title {
+.vault-compass-empty__title {
 	color: var(--text-normal);
 	font-size: var(--font-ui-large);
 	font-weight: var(--font-semibold);
 	margin: 0;
 }
 
-.vault-mind-empty__desc {
+.vault-compass-empty__desc {
 	margin: 0;
 	font-size: var(--font-ui-small);
 	max-width: 42ch;
 	line-height: 1.5;
 }
 
-.vault-mind-empty__prompts {
+.vault-compass-empty__prompts {
 	display: flex;
 	flex-direction: column;
 	gap: var(--size-2-2);
@@ -176,7 +176,7 @@
 	margin-top: var(--size-2-2);
 }
 
-.vault-mind-empty__prompt {
+.vault-compass-empty__prompt {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-m);
 	background: var(--background-secondary);
@@ -186,13 +186,13 @@
 	cursor: pointer;
 }
 
-.vault-mind-empty__prompt:hover {
+.vault-compass-empty__prompt:hover {
 	background: var(--background-modifier-hover);
 }
 
 /* ─── Composer (last child — always at the bottom) ────────────────────────── */
 
-.vault-mind-composer {
+.vault-compass-composer {
 	display: flex;
 	align-items: flex-end;
 	gap: var(--size-2-2);
@@ -201,7 +201,7 @@
 	border-top: 1px solid var(--background-modifier-border);
 }
 
-.vault-mind-textarea {
+.vault-compass-textarea {
 	flex: 1;
 	min-height: 0;
 	max-height: 150px; /* ~6 rows */
@@ -217,22 +217,22 @@
 	line-height: 1.5;
 }
 
-.vault-mind-textarea:focus {
+.vault-compass-textarea:focus {
 	outline: none;
 	border-color: var(--background-modifier-border-focus);
 }
 
-.vault-mind-textarea:disabled {
+.vault-compass-textarea:disabled {
 	opacity: 0.6;
 }
 
-.vault-mind-textarea::placeholder {
+.vault-compass-textarea::placeholder {
 	color: var(--text-faint);
 }
 
 /* ─── Buttons ─────────────────────────────────────────────────────────────── */
 
-.vault-mind-btn {
+.vault-compass-btn {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-m);
 	background: var(--background-secondary);
@@ -243,42 +243,42 @@
 	white-space: nowrap;
 }
 
-.vault-mind-btn:hover {
+.vault-compass-btn:hover {
 	background: var(--background-modifier-hover);
 }
 
 /* Accent (Send / Approve) */
-.vault-mind-btn--primary {
+.vault-compass-btn--primary {
 	background: var(--interactive-accent);
 	border-color: var(--interactive-accent);
 	color: var(--text-on-accent);
 }
 
-.vault-mind-btn--primary:hover:not(:disabled) {
+.vault-compass-btn--primary:hover:not(:disabled) {
 	background: var(--interactive-accent-hover);
 }
 
-.vault-mind-btn--primary:disabled,
-.vault-mind-btn:disabled {
+.vault-compass-btn--primary:disabled,
+.vault-compass-btn:disabled {
 	opacity: 0.5;
 	cursor: default;
 }
 
 /* Stop: soft error affordance so Send and Stop never look alike */
-.vault-mind-btn--stop {
+.vault-compass-btn--stop {
 	background: var(--background-modifier-error);
 	color: var(--text-error);
 	border-color: var(--background-modifier-error);
 }
 
-.vault-mind-btn--stop:hover {
+.vault-compass-btn--stop:hover {
 	background: var(--background-modifier-error-hover) !important;
 	color: var(--text-error) !important;
 }
 
 /* ─── Approval card ───────────────────────────────────────────────────────── */
 
-.vault-mind-approval {
+.vault-compass-approval {
 	margin: var(--size-2-2) 0;
 	padding: var(--size-4-2);
 	border: 1px solid var(--background-modifier-border);
@@ -287,44 +287,44 @@
 	background: var(--background-secondary);
 }
 
-.vault-mind-approval__title {
+.vault-compass-approval__title {
 	display: flex;
 	align-items: baseline;
 	gap: var(--size-2-2);
 	margin-bottom: var(--size-2-2);
 }
 
-.vault-mind-approval__tool {
+.vault-compass-approval__tool {
 	font-weight: var(--font-semibold);
 	color: var(--text-normal);
 }
 
-.vault-mind-approval__id {
+.vault-compass-approval__id {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	font-family: var(--font-monospace);
 }
 
-.vault-mind-approval__hint {
+.vault-compass-approval__hint {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	margin: 0 0 var(--size-2-1) 0;
 }
 
-.vault-mind-approval__label {
+.vault-compass-approval__label {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	display: block;
 	margin-bottom: var(--size-2-1);
 }
 
-.vault-mind-approval__value {
+.vault-compass-approval__value {
 	color: var(--text-normal);
 	font-size: var(--font-ui-small);
 	word-break: break-word;
 }
 
-.vault-mind-approval__code {
+.vault-compass-approval__code {
 	margin: 0 0 var(--size-2-1) 0;
 	padding: var(--size-2-2);
 	border: 1px solid var(--background-modifier-border);
@@ -339,7 +339,7 @@
 	overflow-y: auto;
 }
 
-.vault-mind-approval__actions {
+.vault-compass-approval__actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: var(--size-2-2);

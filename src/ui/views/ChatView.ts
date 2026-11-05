@@ -1,26 +1,26 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
-import type VaultMindPlugin from "@/main";
+import type VaultCompassPlugin from "@/main";
 import { Root, createRoot } from "react-dom/client";
 import { Chat } from "@/ui/components/Chat";
 import React from "react";
 
-export const VIEW_TYPE_VAULT_MIND = "vault-mind-chat-view";
+export const VIEW_TYPE_VAULT_COMPASS = "vault-compass-chat-view";
 
 export class ChatView extends ItemView {
-	plugin: VaultMindPlugin;
+	plugin: VaultCompassPlugin;
 	private root: Root | null = null;
 
-	constructor(leaf: WorkspaceLeaf, plugin: VaultMindPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: VaultCompassPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
 
 	getViewType(): string {
-		return VIEW_TYPE_VAULT_MIND;
+		return VIEW_TYPE_VAULT_COMPASS;
 	}
 
 	getDisplayText(): string {
-		return "Vault Mind Chat";
+		return "Vault Compass Chat";
 	}
 
 	getIcon(): string {
@@ -34,9 +34,9 @@ export class ChatView extends ItemView {
 		// so the composer stays pinned at the bottom.
 		const container = this.contentEl;
 		container.empty();
-		container.addClass("vault-mind-chat-container");
+		container.addClass("vault-compass-chat-container");
 
-		const mountPoint = container.createDiv("vault-mind-chat-mount");
+		const mountPoint = container.createDiv("vault-compass-chat-mount");
 		this.root = createRoot(mountPoint);
 		this.root.render(React.createElement(Chat, { plugin: this.plugin }));
 	}

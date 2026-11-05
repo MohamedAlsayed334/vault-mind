@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import type VaultMindPlugin from "@/main";
+import type VaultCompassPlugin from "@/main";
 import { useAgent } from "@/ui/hooks/useAgent";
 import { MessageBubble, isToolLine } from "@/ui/components/Message";
 import { ApprovalModal } from "@/ui/components/ApprovalModal";
 import type { ChatMessage } from "@/core/types";
 
 export interface ChatProps {
-	plugin: VaultMindPlugin;
+	plugin: VaultCompassPlugin;
 }
 
 // ~6 rows of textarea before it stops growing (CSS max-height matches).
@@ -81,10 +81,10 @@ export const Chat: React.FC<ChatProps> = ({ plugin }) => {
 
 	if (messages.length === 0 && !busy && !pendingApproval) {
 		return (
-			<div className="vault-mind-chat">
+			<div className="vault-compass-chat">
 				<EmptyState onUsePrompt={handleUsePrompt} />
 				<ComposerForm
-					className="vault-mind-composer"
+					className="vault-compass-composer"
 					input={input}
 					setInput={setInput}
 					textareaRef={textareaRef}
@@ -105,14 +105,14 @@ export const Chat: React.FC<ChatProps> = ({ plugin }) => {
 				: null;
 
 	return (
-		<div className="vault-mind-chat">
-			<div className="vault-mind-messages">
+		<div className="vault-compass-chat">
+			<div className="vault-compass-messages">
 				{messages.map((msg: ChatMessage, idx: number) => (
 					<MessageBubble key={idx} message={msg} />
 				))}
 				{showTyping && !pendingApproval && <TypingIndicator />}
 				{statusLabel && !pendingApproval && (
-					<div className="vault-mind-msg vault-mind-msg--assistant">
+					<div className="vault-compass-msg vault-compass-msg--assistant">
 						<span style={{ fontStyle: "italic", opacity: 0.7 }}>{statusLabel}</span>
 					</div>
 				)}
@@ -122,7 +122,7 @@ export const Chat: React.FC<ChatProps> = ({ plugin }) => {
 				<div ref={messagesEndRef} />
 			</div>
 			<ComposerForm
-				className="vault-mind-composer"
+				className="vault-compass-composer"
 				input={input}
 				setInput={setInput}
 				textareaRef={textareaRef}
@@ -136,25 +136,25 @@ export const Chat: React.FC<ChatProps> = ({ plugin }) => {
 };
 
 const TypingIndicator: React.FC = () => (
-	<div className="vault-mind-msg vault-mind-msg--assistant">
-		<div className="vault-mind-typing" aria-label="Vault Mind is responding">
-			<span className="vault-mind-typing-dot" />
-			<span className="vault-mind-typing-dot" />
-			<span className="vault-mind-typing-dot" />
+	<div className="vault-compass-msg vault-compass-msg--assistant">
+		<div className="vault-compass-typing" aria-label="Vault Compass is responding">
+			<span className="vault-compass-typing-dot" />
+			<span className="vault-compass-typing-dot" />
+			<span className="vault-compass-typing-dot" />
 		</div>
 	</div>
 );
 
 const EmptyState: React.FC<{ onUsePrompt: (prompt: string) => void }> = ({ onUsePrompt }) => (
-	<div className="vault-mind-empty">
-		<h2 className="vault-mind-empty__title">Vault Mind</h2>
-		<p className="vault-mind-empty__desc">
+	<div className="vault-compass-empty">
+		<h2 className="vault-compass-empty__title">Vault Compass</h2>
+		<p className="vault-compass-empty__desc">
 			Your AI agent for Obsidian. It reads context from the current note and selection, and can edit
 			your notes — every write requires your approval first.
 		</p>
-		<div className="vault-mind-empty__prompts">
+		<div className="vault-compass-empty__prompts">
 			{SUGGESTED_PROMPTS.map((prompt) => (
-				<button key={prompt} type="button" className="vault-mind-empty__prompt" onClick={() => onUsePrompt(prompt)}>
+				<button key={prompt} type="button" className="vault-compass-empty__prompt" onClick={() => onUsePrompt(prompt)}>
 					{prompt}
 				</button>
 			))}
@@ -190,16 +190,16 @@ function ComposerForm({ className, input, setInput, textareaRef, onKeyDown, busy
 				onKeyDown={onKeyDown}
 				placeholder="Ask about your vault…  (Enter to send, Shift+Enter for a new line)"
 				disabled={busy}
-				aria-label="Message Vault Mind"
-				className="vault-mind-textarea"
+				aria-label="Message Vault Compass"
+				className="vault-compass-textarea"
 				style={{ height: "auto" }}
 			/>
 			{busy ? (
-				<button type="button" onClick={onCancel} className="vault-mind-btn vault-mind-btn--stop" title="Stop generating">
+				<button type="button" onClick={onCancel} className="vault-compass-btn vault-compass-btn--stop" title="Stop generating">
 					Stop
 				</button>
 			) : (
-				<button type="submit" disabled={!input.trim()} className="vault-mind-btn vault-mind-btn--primary" title="Send message">
+				<button type="submit" disabled={!input.trim()} className="vault-compass-btn vault-compass-btn--primary" title="Send message">
 					Send
 				</button>
 			)}

@@ -1,4 +1,4 @@
-# ARCHITECTURE.md — Vault Mind
+# ARCHITECTURE.md — Vault Compass
 
 Full system design. Read AGENTS.md first for rules and constraints.
 
@@ -76,7 +76,7 @@ User input (chat / command / editor selection)
 OAuth flow (desktop + mobile):
 1. Build auth URL with PKCE challenge
 2. window.open(authUrl) — user logs in in browser
-3. Browser redirects to obsidian://vault-mind/oauth?code=...
+3. Browser redirects to obsidian://vault-compass/oauth?code=...
 4. registerObsidianProtocolHandler catches it
 5. Exchange code for tokens
 6. Store in TokenStore

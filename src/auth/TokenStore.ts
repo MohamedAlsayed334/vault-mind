@@ -1,5 +1,5 @@
 export class TokenStore {
-	private storageKeyPrefix = "vault-mind-token-";
+	private storageKeyPrefix = "vault-compass-token-";
 	private memoryStore: Map<string, string> = new Map();
 
 	get(providerId: string): string | null {

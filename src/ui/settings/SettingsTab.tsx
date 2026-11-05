@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type VaultMindPlugin from "@/main";
+import type VaultCompassPlugin from "@/main";
 import type { AIProvider } from "@/providers/base/AIProvider";
 import type { ModelInfo } from "@/core/types";
 import { GeminiProvider } from "@/providers/gemini/GeminiProvider";
@@ -11,7 +11,7 @@ import { OpenAIProvider } from "@/providers/openai/OpenAIProvider";
  * "Saved" confirmation on every persisted change.
  */
 export class SettingsTab extends PluginSettingTab {
-	plugin: VaultMindPlugin;
+	plugin: VaultCompassPlugin;
 
 	// Component-scoped state, never persisted. The fetched model list lives
 	// only as long as this tab instance — the fallback list is used otherwise.
@@ -22,7 +22,7 @@ export class SettingsTab extends PluginSettingTab {
 	private savedEl: HTMLElement | null = null;
 	private savedTimer: number | null = null;
 
-	constructor(app: App, plugin: VaultMindPlugin) {
+	constructor(app: App, plugin: VaultCompassPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -31,7 +31,7 @@ export class SettingsTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Vault Mind Settings" });
+		containerEl.createEl("h2", { text: "Vault Compass Settings" });
 
 		// Transient save confirmation — shown on every persisted change.
 		this.savedEl = containerEl.createEl("p", { cls: "setting-item-description" });

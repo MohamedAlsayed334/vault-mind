@@ -1,4 +1,4 @@
-# AGENTS.md — Vault Mind
+# AGENTS.md — Vault Compass
 
 Read this file fully before touching any other file in this repo.
 It is the authoritative guide for every AI agent (Claude, Copilot, OpenCode, Cursor, etc.) working here.
@@ -7,7 +7,7 @@ It is the authoritative guide for every AI agent (Claude, Copilot, OpenCode, Cur
 
 ## What this project is
 
-Vault Mind is an **Obsidian plugin** built as a **modular monolith**.
+Vault Compass is an **Obsidian plugin** built as a **modular monolith**.
 Everything runs inside Obsidian — no backend, no external server, no native binaries.
 It is an **AI agent**, not just a chat interface: it has a reasoning loop, vault tool execution,
 provider abstraction, and a streaming event system.
@@ -53,7 +53,7 @@ there is clear evidence it is needed.
 ## Project structure
 
 ```
-vault-mind/
+vault-compass/
 ├── manifest.json              # Obsidian plugin manifest (isDesktopOnly: false)
 ├── versions.json              # Min Obsidian version per plugin version
 ├── package.json               # deps: React, Zod, Zustand, Vitest, esbuild
@@ -230,7 +230,7 @@ npm run test       # vitest
 ```
 
 Testing in Obsidian: copy `main.js` + `manifest.json` into
-`.obsidian/plugins/vault-mind/` in a test vault, then reload plugins.
+`.obsidian/plugins/vault-compass/` in a test vault, then reload plugins.
 
 ---
 
