@@ -247,6 +247,28 @@
 	background: var(--background-modifier-hover);
 }
 
+/* Icon-only square buttons (Send / Stop). A fixed 32×32 box means no text
+   can clip — there is no text; the inline SVG scales to the box. */
+.vault-compass-btn--icon {
+	width: 32px;
+	height: 32px;
+	min-width: 32px;
+	min-height: 32px;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.vault-compass-btn--icon svg {
+	width: 14px;
+	height: 14px;
+	fill: currentColor;
+	display: block;
+	pointer-events: none;
+}
+
 /* Accent (Send / Approve) */
 .vault-compass-btn--primary {
 	background: var(--interactive-accent);
@@ -264,16 +286,21 @@
 	cursor: default;
 }
 
-/* Stop: soft error affordance so Send and Stop never look alike */
+/* Stop: soft error affordance so Send and Stop never look alike.
+   Rest state keeps the translucent error tint with --text-error text;
+   hover switches to the solid error background and its explicit companion
+   text color at the same time, so contrast always holds. These rules come
+   after .vault-compass-btn:hover with equal specificity, so they win by
+   cascade order — no !important needed. */
 .vault-compass-btn--stop {
 	background: var(--background-modifier-error);
-	color: var(--text-error);
 	border-color: var(--background-modifier-error);
+	color: var(--text-error);
 }
 
 .vault-compass-btn--stop:hover {
-	background: var(--background-modifier-error-hover) !important;
-	color: var(--text-error) !important;
+	background: var(--background-modifier-error-hover);
+	color: var(--text-on-accent);
 }
 
 /* ─── Approval card ───────────────────────────────────────────────────────── */

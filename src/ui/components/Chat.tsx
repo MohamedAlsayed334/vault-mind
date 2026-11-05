@@ -173,6 +173,20 @@ interface ComposerProps {
 	onCancel: () => void;
 }
 
+// Inline SVG icons keep the buttons icon-only with no extra dependency,
+// and a fixed viewBox means nothing clips regardless of theme font metrics.
+const SendIcon = (
+	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+		<path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+	</svg>
+);
+
+const StopIcon = (
+	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+		<rect x="6" y="6" width="12" height="12" rx="1.5" />
+	</svg>
+);
+
 function ComposerForm({ className, input, setInput, textareaRef, onKeyDown, busy, onSend, onCancel }: ComposerProps) {
 	return (
 		<form
@@ -195,12 +209,24 @@ function ComposerForm({ className, input, setInput, textareaRef, onKeyDown, busy
 				style={{ height: "auto" }}
 			/>
 			{busy ? (
-				<button type="button" onClick={onCancel} className="vault-compass-btn vault-compass-btn--stop" title="Stop generating">
-					Stop
+				<button
+					type="button"
+					onClick={onCancel}
+					className="vault-compass-btn vault-compass-btn--icon vault-compass-btn--stop"
+					title="Stop generating"
+					aria-label="Stop"
+				>
+					{StopIcon}
 				</button>
 			) : (
-				<button type="submit" disabled={!input.trim()} className="vault-compass-btn vault-compass-btn--primary" title="Send message">
-					Send
+				<button
+					type="submit"
+					disabled={!input.trim()}
+					className="vault-compass-btn vault-compass-btn--icon vault-compass-btn--primary"
+					title="Send message"
+					aria-label="Send"
+				>
+					{SendIcon}
 				</button>
 			)}
 		</form>
