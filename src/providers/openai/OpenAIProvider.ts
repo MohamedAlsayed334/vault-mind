@@ -1,4 +1,11 @@
-import type { ChatMessage, AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";
+import type {
+	AIRequest,
+	AIEvent,
+	ModelInfo,
+	ProviderCapabilities,
+	AuthState,
+	ContentBlock,
+} from "@/core/types";
 import type { AIProvider } from "@/providers/base/AIProvider";
 
 export class OpenAIProvider implements AIProvider {
@@ -6,9 +13,7 @@ export class OpenAIProvider implements AIProvider {
 	readonly name = "OpenAI";
 	readonly capabilities: ProviderCapabilities = {
 		streaming: true,
-		// Tool-call mapping is not implemented yet for OpenAI; the agent loop
-		// simply won't receive tool_call events from this provider for now.
-		toolCalling: false,
+		toolCalling: true,
 		vision: true,
 		corsCompatible: true,
 	};
@@ -144,13 +149,21 @@ export class OpenAIProvider implements AIProvider {
 		const model = request.model || "gpt-6-luna";
 		const url = "https://api.openai.com/v1/chat/completions";
 
-		const messages = request.messages.map((m: ChatMessage) => ({
-			role: m.role,
-			content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-		}));
+		const body: Record<string, unknown> = {
+			model,
+			messages: this.messagesFor(request),
+			stream: true,
+		};
 
-		if (request.systemPrompt) {
-			messages.unshift({ role: "system", content: request.systemPrompt });
+		if (request.tools && request.tools.length > 0) {
+			body.tools = request.tools.map((tool) => ({
+				type: "function",
+				function: {
+					name: tool.name,
+					description: tool.description,
+					parameters: tool.inputSchema,
+				},
+			}));
 		}
 
 		try {
@@ -160,11 +173,7 @@ export class OpenAIProvider implements AIProvider {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${this.accessToken}`,
 				},
-				body: JSON.stringify({
-					model,
-					messages,
-					stream: true,
-				}),
+				body: JSON.stringify(body),
 				signal: request.signal,
 			});
 
@@ -180,6 +189,11 @@ export class OpenAIProvider implements AIProvider {
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
 			let buffer = "";
+
+			// OpenAI streams a single call as many index-keyed fragments
+			// (id / name / argument slices). Accumulate per call index and
+			// yield complete calls once the stream closes.
+			const pendingCalls = new Map<number, { id: string; name: string; arguments: string }>();
 
 			while (true) {
 				const { done, value } = await reader.read();
@@ -198,20 +212,122 @@ export class OpenAIProvider implements AIProvider {
 
 						try {
 							const data = JSON.parse(jsonStr);
-							const delta = data.choices?.[0]?.delta?.content;
-							if (delta) {
-								yield { type: "text_delta", delta };
+							const delta = data.choices?.[0]?.delta;
+							if (typeof delta?.content === "string" && delta.content) {
+								yield { type: "text_delta", delta: delta.content };
 							}
-						} catch (e) {
+							if (Array.isArray(delta?.tool_calls)) {
+								for (const tc of delta.tool_calls) {
+									const index = typeof tc.index === "number" ? tc.index : 0;
+									const entry = pendingCalls.get(index) ?? { id: "", name: "", arguments: "" };
+									if (typeof tc.id === "string" && tc.id) entry.id = tc.id;
+									if (typeof tc.function?.name === "string" && tc.function.name) {
+										entry.name = tc.function.name;
+									}
+									if (typeof tc.function?.arguments === "string") {
+										entry.arguments += tc.function.arguments;
+									}
+									pendingCalls.set(index, entry);
+								}
+							}
+						} catch {
 							// Ignore incomplete chunk parse errors
 						}
 					}
 				}
 			}
 
+			for (const call of pendingCalls.values()) {
+				// Mirror Gemini: yield a parsed arguments object; when the model
+				// produced invalid JSON the orchestrator still needs the raw
+				// payload, so pass the string through as-is.
+				let args: unknown;
+				try {
+					args = call.arguments ? JSON.parse(call.arguments) : {};
+				} catch {
+					args = call.arguments;
+				}
+				yield { type: "tool_call", id: call.id, name: call.name, arguments: args };
+			}
+
 			yield { type: "done" };
 		} catch (err: any) {
 			yield { type: "error", message: err.message || String(err) };
 		}
+	}
+
+	/** Map session history into the OpenAI chat-completions wire format. */
+	private messagesFor(request: AIRequest): Array<Record<string, unknown>> {
+		const messages: Array<Record<string, unknown>> = [];
+		if (request.systemPrompt) {
+			messages.push({ role: "system", content: request.systemPrompt });
+		}
+
+		for (const msg of request.messages) {
+			if (typeof msg.content === "string") {
+				messages.push({ role: msg.role, content: msg.content });
+				continue;
+			}
+
+			const blocks = msg.content as ContentBlock[];
+			const toolResults = blocks.filter((b) => b.type === "tool_result");
+			const toolUses = blocks.filter((b) => b.type === "tool_use");
+			const images = blocks.filter((b) => b.type === "image");
+			const text =
+				blocks
+					.filter((b) => b.type === "text")
+					.map((b) => (b as { text: string }).text)
+					.join("\n") || null;
+
+			// The orchestrator hands tool results back inside a user turn;
+			// OpenAI requires each as its own role:"tool" message keyed by
+			// tool_call_id, in call order.
+			if (toolResults.length > 0) {
+				for (const result of toolResults as Array<Extract<ContentBlock, { type: "tool_result" }>>) {
+					messages.push({
+						role: "tool",
+						tool_call_id: result.toolUseId,
+						content: result.content,
+					});
+				}
+				if (text) {
+					messages.push({ role: "user", content: text });
+				}
+				continue;
+			}
+
+			// The assistant turn that issued the calls carries its text (or
+			// null when it only called tools) plus the tool_calls array.
+			if (toolUses.length > 0) {
+				messages.push({
+					role: msg.role,
+					content: text,
+					tool_calls: (toolUses as Array<Extract<ContentBlock, { type: "tool_use" }>>).map((use) => ({
+						id: use.id,
+						type: "function",
+						function: {
+							name: use.name,
+							arguments: JSON.stringify(use.input ?? {}),
+						},
+					})),
+				});
+				continue;
+			}
+
+			// Plain multimodal turn: images become content parts.
+			if (images.length > 0 && msg.role !== "assistant") {
+				const parts: Array<Record<string, unknown>> = [];
+				if (text) parts.push({ type: "text", text });
+				for (const image of images as Array<Extract<ContentBlock, { type: "image" }>>) {
+					parts.push({ type: "image_url", image_url: { url: image.url } });
+				}
+				messages.push({ role: msg.role, content: parts.length > 0 ? parts : null });
+				continue;
+			}
+
+			messages.push({ role: msg.role, content: text ?? "" });
+		}
+
+		return messages;
 	}
 }
