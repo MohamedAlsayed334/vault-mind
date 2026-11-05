@@ -1,8 +1,10 @@
 import React from "react";
 import type { ChatMessage } from "@/core/types";
+import type { DisplayMessage } from "@/ui/hooks/useAgent";
+import { friendlyMessage } from "@/core/errorMessages";
 
 export interface MessageBubbleProps {
-	message: ChatMessage;
+	message: DisplayMessage;
 }
 
 const TOOL_MARKER = "⚙ Using tool:";
@@ -23,6 +25,10 @@ export function isToolLine(text: string): boolean {
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 	const isUser = message.role === "user";
 	const text = messageText(message);
+	if ("isError" in message && message.isError) {
+		const { headline, hint } = friendlyMessage(message.code, message.providerId ?? "");
+		return <ErrorBubble headline={headline} hint={hint} cause={message.cause ?? text} />;
+	}
 
 	// Compact chip row for tool activity — not a full chat bubble.
 	if (!isUser && isToolLine(text)) {
@@ -35,11 +41,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 
 	// Errors: small plain line, no bubble.
 	if (!isUser && text.startsWith("Error:")) {
-		return (
-			<div className="vault-compass-msg vault-compass-msg--assistant">
-				<span className="vault-compass-error-line">{text}</span>
-			</div>
-		);
+		const { headline, hint } = friendlyMessage(undefined, "");
+		return <ErrorBubble headline={headline} hint={hint} cause={text} />;
 	}
 
 	return (
@@ -50,3 +53,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 		</div>
 	);
 };
+
+const ErrorBubble: React.FC<{ headline: string; hint: string; cause?: string }> = ({ headline, hint, cause }) => (
+	<div className="vault-compass-msg vault-compass-msg--assistant">
+		<div className="vault-compass-error">
+			<span className="vault-compass-error__headline">{headline}</span>
+			<span className="vault-compass-error__hint">{hint}</span>
+			{cause && <details><summary>Show technical details</summary><code className="vault-compass-error__cause">{cause}</code></details>}
+		</div>
+	</div>
+);

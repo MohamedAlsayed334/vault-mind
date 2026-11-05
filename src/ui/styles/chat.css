@@ -80,6 +80,12 @@
 	padding: var(--size-2-2) 0;
 }
 
+.vault-compass-error { display: flex; flex-direction: column; gap: var(--size-2-1); padding: var(--size-2-2) 0; }
+.vault-compass-error__headline { color: var(--text-error); font-weight: var(--font-semibold); font-size: var(--font-ui-small); }
+.vault-compass-error__hint { color: var(--text-muted); font-size: var(--font-ui-small); }
+.vault-compass-error details > summary { cursor: pointer; color: var(--text-muted); font-size: var(--font-ui-smaller); margin-top: var(--size-2-1); }
+.vault-compass-error__cause { display: block; margin-top: var(--size-2-1); padding: var(--size-2-2); background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s); font-family: var(--font-monospace); font-size: var(--font-ui-smaller); white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow-y: auto; }
+
 /* Tool activity: compact muted chip rows, not full bubbles */
 .vault-compass-tool-chip {
 	display: inline-flex;

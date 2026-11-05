@@ -4,6 +4,8 @@ import type { AIProvider } from "@/providers/base/AIProvider";
 import type { ModelInfo } from "@/core/types";
 import { GeminiProvider } from "@/providers/gemini/GeminiProvider";
 import { OpenAIProvider } from "@/providers/openai/OpenAIProvider";
+import { friendlyMessage } from "@/core/errorMessages";
+import { ProviderError } from "@/core/ProviderError";
 
 /**
  * Settings built around the selected provider:
@@ -189,6 +191,7 @@ export class SettingsTab extends PluginSettingTab {
 					this.connectionStatus = "Testing…";
 					statusEl.setText(this.connectionStatus);
 					setButtonBusy(true);
+					let technicalCause: string | undefined;
 					try {
 						if (provider.id === "gemini") {
 							await GeminiProvider.checkConnection(key);
@@ -199,11 +202,19 @@ export class SettingsTab extends PluginSettingTab {
 						}
 						this.connectionStatus = `✓ Connected as ${provider.name}`;
 					} catch (err) {
-						this.connectionStatus = `✗ ${errMessage(err)}`;
+						const code = err instanceof ProviderError ? err.code : undefined;
+						const { headline } = friendlyMessage(code, provider.id);
+						this.connectionStatus = `✗ ${headline}`;
+						technicalCause = err instanceof ProviderError ? err.cause : undefined;
 					}
 					setButtonBusy(false);
 					setStatusUnderline(statusEl, this.connectionStatus);
 					statusEl.setText(this.connectionStatus);
+					if (technicalCause) {
+						const details = statusEl.createEl("details");
+						details.createEl("summary", { text: "Show technical details" });
+						details.createEl("code", { text: technicalCause });
+					}
 				})
 			);
 
@@ -245,10 +256,6 @@ export class SettingsTab extends PluginSettingTab {
 			this.savedTimer = null;
 		}, 2000);
 	}
-}
-
-function errMessage(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
 }
 
 function setStatusUnderline(el: HTMLElement, status: string): void {

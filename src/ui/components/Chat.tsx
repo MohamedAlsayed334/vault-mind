@@ -3,7 +3,7 @@ import type VaultCompassPlugin from "@/main";
 import { useAgent } from "@/ui/hooks/useAgent";
 import { MessageBubble, isToolLine } from "@/ui/components/Message";
 import { ApprovalModal } from "@/ui/components/ApprovalModal";
-import type { ChatMessage } from "@/core/types";
+import type { DisplayMessage } from "@/ui/hooks/useAgent";
 
 export interface ChatProps {
 	plugin: VaultCompassPlugin;
@@ -18,7 +18,7 @@ const SUGGESTED_PROMPTS = [
 	"Create a daily note outline",
 ];
 
-function messageText(message: ChatMessage): string {
+function messageText(message: DisplayMessage): string {
 	if (typeof message.content === "string") return message.content;
 	return message.content
 		.map((b) => (b.type === "text" ? b.text : b.type === "tool_use" ? `[Tool Call: ${b.name}]` : ""))
@@ -107,7 +107,7 @@ export const Chat: React.FC<ChatProps> = ({ plugin }) => {
 	return (
 		<div className="vault-compass-chat">
 			<div className="vault-compass-messages">
-				{messages.map((msg: ChatMessage, idx: number) => (
+				{messages.map((msg: DisplayMessage, idx: number) => (
 					<MessageBubble key={idx} message={msg} />
 				))}
 				{showTyping && !pendingApproval && <TypingIndicator />}

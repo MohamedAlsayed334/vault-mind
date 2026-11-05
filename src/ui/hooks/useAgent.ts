@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import type VaultCompassPlugin from "@/main";
 import type { AgentSession, ChatMessage } from "@/core/types";
+import type { ErrorCode } from "@/core/ProviderError";
 import { AgentOrchestrator } from "@/core/AgentOrchestrator";
 
 export interface PendingApproval {
@@ -10,10 +11,11 @@ export interface PendingApproval {
 }
 
 type AgentStatus = "idle" | "running" | "waiting_approval" | "error";
+export type DisplayMessage = ChatMessage | { role: "assistant"; content: string; isError: true; code?: ErrorCode; cause?: string; providerId?: string };
 
 export function useAgent(plugin: VaultCompassPlugin) {
 	// Display messages only. The agent's real history (incl. tool blocks) lives in the session.
-	const [messages, setMessages] = useState<ChatMessage[]>([]);
+	const [messages, setMessages] = useState<DisplayMessage[]>([]);
 	const [status, setStatus] = useState<AgentStatus>("idle");
 	const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
 	const abortRef = useRef<AbortController | null>(null);
@@ -22,6 +24,9 @@ export function useAgent(plugin: VaultCompassPlugin) {
 
 	const pushMessage = useCallback((message: ChatMessage) => {
 		setMessages((prev) => [...prev, message]);
+	}, []);
+	const pushError = useCallback((message: string, code?: ErrorCode, cause?: string, providerId?: string) => {
+		setMessages((prev) => [...prev, { role: "assistant", content: message, isError: true, code, cause, providerId }]);
 	}, []);
 
 	const updateLastAssistant = useCallback((content: string) => {
@@ -45,17 +50,14 @@ export function useAgent(plugin: VaultCompassPlugin) {
 			try {
 				provider = plugin.providerRegistry.get(providerId);
 			} catch {
-				pushMessage({ role: "assistant", content: "Error: No AI provider registered." });
+				pushError("No AI provider registered.", "unknown", "No AI provider registered.", providerId);
 				setStatus("error");
 				return;
 			}
 
 			const key = plugin.tokenStore.get(providerId);
 			if (!key) {
-				pushMessage({
-					role: "assistant",
-					content: `Error: No API key configured for ${provider.name}. Add one in Settings → Vault Compass.`,
-				});
+				pushError(`No API key configured for ${provider.name}. Add one in Settings → Vault Compass.`, "invalid_key", undefined, providerId);
 				setStatus("error");
 				return;
 			}
@@ -143,7 +145,10 @@ export function useAgent(plugin: VaultCompassPlugin) {
 
 						case "error":
 							flush();
-							pushMessage({ role: "assistant", content: `Error: ${event.message}` });
+							// Stop/abort is a silent control signal, not a user-facing error.
+							if (event.message !== "Cancelled" || event.code !== undefined) {
+								pushError(event.message, event.code, event.cause ?? event.message, providerId);
+							}
 							setStatus("error");
 							break;
 
@@ -159,7 +164,8 @@ export function useAgent(plugin: VaultCompassPlugin) {
 			} catch (err: unknown) {
 				if (!controller.signal.aborted) {
 					const message = err instanceof Error ? err.message : String(err);
-					pushMessage({ role: "assistant", content: `Error: ${message}` });
+					const providerError = err as { code?: ErrorCode; cause?: string };
+					pushError(message, providerError?.code, providerError?.cause ?? message, providerId);
 					setStatus("error");
 				}
 			} finally {
@@ -168,7 +174,7 @@ export function useAgent(plugin: VaultCompassPlugin) {
 				setStatus((current) => (current === "running" ? "idle" : current));
 			}
 		},
-		[plugin, pushMessage, updateLastAssistant],
+		[plugin, pushMessage, pushError, updateLastAssistant],
 	);
 
 	const cancel = useCallback(() => {
