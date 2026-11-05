@@ -2,15 +2,15 @@
 
 Vault Mind is an Obsidian plugin for AI-assisted note work: an agent with a reasoning loop, vault tool execution (read / search / edit), and an approval gate for every write. Desktop + mobile.
 
-The V1 implementation phases (1–8) are recorded in [docs/PLAN.md](./docs/PLAN.md). Phases 1–7 are implemented and the integration gaps found in the November 2026 review have been fixed — see [docs/REVIEW.md](./docs/REVIEW.md).
+The V1 implementation phases (1–8) are recorded in [docs/PLAN.md](./docs/PLAN.md). Phases 1–7 are implemented, and the integration gaps found in the November 2026 reviews (rounds 1 and 2) have been fixed — see [docs/REVIEW.md](./docs/REVIEW.md).
 
 ## What works now
 
-- Chat sidebar (ribbon icon or **Open Vault Mind** command) with streaming responses
+- Chat sidebar (ribbon icon or **Open Vault Mind** command) with streaming responses, a composer pinned to the bottom (Enter to send, Shift+Enter for a newline), an empty state with suggested prompts, and a compact approval card for write actions
 - Agent loop with tool calling: `read_note`, `search_vault`, `edit_note`
 - Approval gate: `edit_note` shows an Approve/Reject card and never writes without explicit approval
 - Vault context: the active note and your current selection are included automatically
-- Gemini provider with API key and full tool-call round trip; OpenAI provider (API key, text-only for now)
+- Gemini and OpenAI providers, both with API key auth, full tool-call round trip, and live model listing (with static fallbacks)
 - API keys stored in browser-side `TokenStore`, never in `data.json` (legacy keys are migrated out automatically)
 - Automated checks: typecheck, ESLint, Vitest (agent loop, approval gate, Gemini SSE/tool mapping), production build — all wired into GitHub Actions CI
 
@@ -33,7 +33,7 @@ npm test
 npm run build
 ```
 
-The production build creates `main.js` in the repository root. For development, use:
+The production build creates `main.js` and `styles.css` in the repository root. For development, use:
 
 ```bash
 npm run dev
@@ -49,6 +49,7 @@ This starts esbuild watch mode.
 2. Create the plugin directory inside the test vault: `.obsidian/plugins/vault-mind/`
 3. Copy these files from the repository root into that directory:
    - `main.js`
+   - `styles.css`
    - `manifest.json`
    - `versions.json`
 4. In Obsidian, open **Settings → Community plugins** and enable Vault Mind. If it does not appear, restart Obsidian and check the developer console for errors.
@@ -67,7 +68,9 @@ The full manual test script — chat smoke test, read/search tools, the write-ap
 ## Security notes
 
 - Use a disposable/test vault for development.
-- API keys are stored in the vault's browser storage (`TokenStore`). They are not written to `data.json`. Older versions did persist the Gemini key there — the plugin migrates and strips it on first load after upgrading.
+- API keys are stored in the vault's browser storage (`TokenStore` — Obsidian's `localStorage`). This is plain browser storage, **not** encrypted secret storage — anyone with access to that vault's data and this machine's user account can read the keys. Keys are never written to `data.json`. Older versions did persist the Gemini key there — the plugin migrates and strips it on first load after upgrading.
+- The Gemini key is sent as a request header, not in the request URL, so it does not end up in proxy/server logs or browser history.
+- **Your note content is sent to the selected AI provider.** The active note and your current text selection are included as context in every prompt. Do not use Vault Mind on notes containing secrets you are not willing to share with your AI provider.
 - OAuth sign-in (OpenAI / Google) is disabled until implemented end-to-end; do not rely on any leftover scaffolding.
 - Write tools are always gated behind an explicit Approve/Reject card. If a write ever happens without the card, report it as a bug.
 
@@ -90,4 +93,4 @@ See [AGENTS.md](./AGENTS.md), [ARCHITECTURE.md](./ARCHITECTURE.md) and the [docs
 
 1. Run the manual V1 acceptance test in a disposable desktop vault: open sidebar → ask about the active note → request an edit → reject (verify the note is unchanged) → approve (verify only the intended text changed).
 2. Mobile smoke test.
-3. Then: OpenAI tool calling, end-to-end OAuth or its removal, diff preview in the approval card, session persistence — tracked in [docs/PLAN.md](./docs/PLAN.md), Phase 8.
+3. Then: end-to-end OAuth, diff preview in the approval card, session persistence — tracked in [docs/PLAN.md](./docs/PLAN.md), Phase 8 round 2.
