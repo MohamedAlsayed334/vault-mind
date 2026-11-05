@@ -31,16 +31,21 @@ describe("classify", () => {
 		const body =
 			'{"error":{"code":404,"message":"This model models/gemini-2.0-flash is no longer available...","status":"NOT_FOUND"}}';
 		expect(classify(404, body, { modelRequest: true })).toBe("model_not_found");
+		expect(classify(404, undefined, { modelRequest: true })).toBe("model_not_found");
 	});
 
 	it("classifies a bare endpoint 404 as unknown", () => {
 		expect(classify(404, "Not Found")).toBe("unknown");
 		expect(classify(404)).toBe("unknown");
+		expect(classify(404, undefined, { modelRequest: false })).toBe("unknown");
 	});
 
 	it("classifies 429 with quota/billing wording as quota_exceeded", () => {
 		expect(classify(429, "You exceeded your current quota, please check your plan and billing")).toBe("quota_exceeded");
 		expect(classify(429, "Resource has been exhausted (e.g. check quota).")).toBe("quota_exceeded");
+		expect(classify(429, "quota exceeded for this month")).toBe("quota_exceeded");
+		expect(classify(429, "billing limit reached")).toBe("quota_exceeded");
+		expect(classify(429, "credit balance low")).toBe("quota_exceeded");
 	});
 
 	it("classifies a plain 429 as rate_limited", () => {
@@ -52,11 +57,14 @@ describe("classify", () => {
 		expect(classify(500)).toBe("server");
 		expect(classify(502, "bad gateway")).toBe("server");
 		expect(classify(503)).toBe("server");
+		expect(classify(599)).toBe("server");
 	});
 
 	it("classifies anything else as unknown", () => {
 		expect(classify(403, "permission denied")).toBe("unknown");
 		expect(classify(418, "teapot")).toBe("unknown");
+		expect(classify(422)).toBe("unknown");
+		expect(classify(200)).toBe("unknown");
 	});
 });
 
@@ -69,6 +77,12 @@ describe("isAbortError", () => {
 		const err = new Error("The operation was aborted");
 		err.name = "AbortError";
 		expect(isAbortError(err)).toBe(true);
+		expect(isAbortError(Object.assign(new Error("Aborted"), { name: "AbortError" }))).toBe(true);
+	});
+
+	it("recognizes defensive TypeError abort wording", () => {
+		expect(isAbortError(new TypeError("The operation was aborted"))).toBe(true);
+		expect(isAbortError(new TypeError("signal is aborted"))).toBe(true);
 	});
 
 	it("does not match ordinary errors", () => {
@@ -79,6 +93,14 @@ describe("isAbortError", () => {
 });
 
 describe("ProviderError", () => {
+	it("sets code, message, name and an absent cause", () => {
+		const err = new ProviderError("invalid_key", "Key rejected");
+		expect(err.code).toBe("invalid_key");
+		expect(err.message).toBe("Key rejected");
+		expect(err.name).toBe("ProviderError");
+		expect(err.cause).toBeUndefined();
+	});
+
 	it("carries code, message, cause and ids", () => {
 		const err = new ProviderError("model_not_found", "Gemini rejected the request (404)", {
 			cause: '{"error":{"code":404}}',
