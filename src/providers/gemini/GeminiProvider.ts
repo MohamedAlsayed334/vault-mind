@@ -1,4 +1,4 @@
-import type { AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";
+import type { AIRequest, AIEvent, ModelInfo, ModelListResult, ProviderCapabilities, AuthState } from "@/core/types";
 import type { AIProvider } from "@/providers/base/AIProvider";
 import { ProviderError, classify, isAbortError } from "@/core/ProviderError";
 import { GeminiClient } from "./GeminiClient";
@@ -98,9 +98,9 @@ export class GeminiProvider implements AIProvider {
 		}
 	}
 
-	async getModels(): Promise<ModelInfo[]> {
+	async getModels(): Promise<ModelListResult> {
 		if (!this.apiKey) {
-			return GeminiProvider.fallbackModels;
+			return { models: GeminiProvider.fallbackModels, degraded: false };
 		}
 
 		try {
@@ -110,13 +110,14 @@ export class GeminiProvider implements AIProvider {
 				headers: { "x-goog-api-key": this.apiKey },
 			});
 			if (!res.ok) {
-				return GeminiProvider.fallbackModels;
+				const body = await res.text().catch(() => "");
+				return { models: GeminiProvider.fallbackModels, degraded: true, reason: geminiModelsFailureReason(classify(res.status, body)) };
 			}
 
 			const data = await res.json();
 			const entries = data?.models;
 			if (!Array.isArray(entries)) {
-				return GeminiProvider.fallbackModels;
+				return { models: GeminiProvider.fallbackModels, degraded: true, reason: "Couldn't load models from Google Gemini. Using the built-in model list." };
 			}
 
 			const models = entries
@@ -144,10 +145,13 @@ export class GeminiProvider implements AIProvider {
 				})
 				.filter((m) => m.id.length > 0);
 
-			return models.length > 0 ? models : GeminiProvider.fallbackModels;
-		} catch {
+			return { models: models.length > 0 ? models : GeminiProvider.fallbackModels, degraded: false };
+		} catch (err) {
 			// Network error / bad JSON — the static list keeps the UI working.
-			return GeminiProvider.fallbackModels;
+			const reason = err instanceof TypeError
+				? "Couldn't reach Google Gemini. Check your internet connection. Using the built-in model list."
+				: "Couldn't load models from Google Gemini. Using the built-in model list.";
+			return { models: GeminiProvider.fallbackModels, degraded: true, reason };
 		}
 	}
 
@@ -213,4 +217,15 @@ export class GeminiProvider implements AIProvider {
 			yield { type: "error", message: err instanceof Error ? err.message : String(err) };
 		}
 	}
+}
+
+function geminiModelsFailureReason(code: string): string {
+	const headline: Record<string, string> = {
+		invalid_key: "Your Google Gemini API key was rejected.",
+		rate_limited: "Google Gemini is rate limited.",
+		quota_exceeded: "You've hit Google Gemini's quota or billing limit.",
+		server: "Google Gemini is having server trouble.",
+		unknown: "Something went wrong while loading models from Google Gemini.",
+	};
+	return `${headline[code] ?? headline.unknown} Using the built-in model list.`;
 }

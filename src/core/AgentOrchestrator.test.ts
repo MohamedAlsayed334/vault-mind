@@ -27,7 +27,7 @@ class StreamingProvider implements AIProvider {
 	}
 	async logout() {}
 	async getModels() {
-		return [];
+		return { models: [], degraded: false };
 	}
 }
 

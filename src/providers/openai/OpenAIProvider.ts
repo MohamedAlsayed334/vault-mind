@@ -1,4 +1,4 @@
-import type { AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState, ContentBlock } from "@/core/types";
+import type { AIRequest, AIEvent, ModelInfo, ModelListResult, ProviderCapabilities, AuthState, ContentBlock } from "@/core/types";
 import type { AIProvider } from "@/providers/base/AIProvider";
 import { ProviderError, classify, isAbortError } from "@/core/ProviderError";
 
@@ -91,9 +91,9 @@ export class OpenAIProvider implements AIProvider {
 		}
 	}
 
-	async getModels(): Promise<ModelInfo[]> {
+	async getModels(): Promise<ModelListResult> {
 		if (!this.accessToken) {
-			return OpenAIProvider.fallbackModels;
+			return { models: OpenAIProvider.fallbackModels, degraded: false };
 		}
 
 		try {
@@ -102,13 +102,14 @@ export class OpenAIProvider implements AIProvider {
 				headers: { Authorization: `Bearer ${this.accessToken}` },
 			});
 			if (!res.ok) {
-				return OpenAIProvider.fallbackModels;
+				const body = await res.text().catch(() => "");
+				return { models: OpenAIProvider.fallbackModels, degraded: true, reason: openaiModelsFailureReason(classify(res.status, body)) };
 			}
 
 			const data = await res.json();
 			const entries = data?.data;
 			if (!Array.isArray(entries)) {
-				return OpenAIProvider.fallbackModels;
+				return { models: OpenAIProvider.fallbackModels, degraded: true, reason: "Couldn't load models from OpenAI. Using the built-in model list." };
 			}
 
 			const models = entries
@@ -130,10 +131,13 @@ export class OpenAIProvider implements AIProvider {
 					};
 				});
 
-			return models.length > 0 ? models : OpenAIProvider.fallbackModels;
-		} catch {
+			return { models: models.length > 0 ? models : OpenAIProvider.fallbackModels, degraded: false };
+		} catch (err) {
 			// Network error / bad JSON — the static list keeps the UI working.
-			return OpenAIProvider.fallbackModels;
+			const reason = err instanceof TypeError
+				? "Couldn't reach OpenAI. Check your internet connection. Using the built-in model list."
+				: "Couldn't load models from OpenAI. Using the built-in model list.";
+			return { models: OpenAIProvider.fallbackModels, degraded: true, reason };
 		}
 	}
 
@@ -359,4 +363,15 @@ export class OpenAIProvider implements AIProvider {
 
 		return messages;
 	}
+}
+
+function openaiModelsFailureReason(code: string): string {
+	const headline: Record<string, string> = {
+		invalid_key: "Your OpenAI API key was rejected.",
+		rate_limited: "OpenAI is rate limited.",
+		quota_exceeded: "You've hit OpenAI's quota or billing limit.",
+		server: "OpenAI is having server trouble.",
+		unknown: "Something went wrong while loading models from OpenAI.",
+	};
+	return `${headline[code] ?? headline.unknown} Using the built-in model list.`;
 }

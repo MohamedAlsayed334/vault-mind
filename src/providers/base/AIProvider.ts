@@ -1,4 +1,4 @@
-import type { AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";
+import type { AIRequest, AIEvent, ModelListResult, ProviderCapabilities, AuthState } from "@/core/types";
 
 export interface AIProvider {
   readonly id: string;
@@ -9,7 +9,7 @@ export interface AIProvider {
   getAuthState(): AuthState;
   logout(): Promise<void>;
 
-  getModels(): Promise<ModelInfo[]>;
+  getModels(): Promise<ModelListResult>;
 
   /**
    * Generate a response. Yields AIEvents.

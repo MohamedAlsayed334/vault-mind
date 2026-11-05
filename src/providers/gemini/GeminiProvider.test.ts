@@ -43,9 +43,10 @@ describe("GeminiProvider", () => {
 	it("returns the static fallback list without an API key", async () => {
 		const provider = new GeminiProvider();
 		const models = await provider.getModels();
-		expect(models).toEqual(GeminiProvider.fallbackModels);
-		expect(models.length).toBe(3);
-		expect(models[0].id).toBe("gemini-3.8-flash");
+		expect(models.models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.degraded).toBe(false);
+		expect(models.models.length).toBe(3);
+		expect(models.models[0].id).toBe("gemini-3.8-flash");
 	});
 
 	it("fetches live models and maps them to ModelInfo", async () => {
@@ -75,7 +76,8 @@ describe("GeminiProvider", () => {
 		await provider.authenticate("api_key", "test-key");
 
 		const models = await provider.getModels();
-		expect(models).toEqual([
+		expect(models.degraded).toBe(false);
+		expect(models.models).toEqual([
 			{
 				id: "gemini-live-x",
 				name: "Gemini Live X",
@@ -114,7 +116,9 @@ describe("GeminiProvider", () => {
 		await provider.authenticate("api_key", "test-key");
 
 		const models = await provider.getModels();
-		expect(models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.degraded).toBe(true);
+		expect(models.reason).toContain("rate limited");
 	});
 
 	it("falls back to the static list on malformed body or network failure", async () => {
@@ -127,7 +131,8 @@ describe("GeminiProvider", () => {
 		await provider.authenticate("api_key", "test-key");
 
 		let models = await provider.getModels();
-		expect(models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.degraded).toBe(true);
 
 		// 200 JSON but missing the models array
 		fetchMock = vi.fn().mockResolvedValue(
@@ -139,14 +144,16 @@ describe("GeminiProvider", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		models = await provider.getModels();
-		expect(models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.degraded).toBe(true);
 
 		// Network error
 		fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
 		vi.stubGlobal("fetch", fetchMock);
 
 		models = await provider.getModels();
-		expect(models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.models).toEqual(GeminiProvider.fallbackModels);
+		expect(models.degraded).toBe(true);
 	});
 
 

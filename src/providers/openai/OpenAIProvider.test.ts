@@ -49,9 +49,10 @@ describe("OpenAIProvider", () => {
 	it("returns the static fallback list without an API key", async () => {
 		const provider = new OpenAIProvider();
 		const models = await provider.getModels();
-		expect(models).toEqual(OpenAIProvider.fallbackModels);
-		expect(models.length).toBe(2);
-		expect(models[0].id).toBe("gpt-6.1-sol");
+		expect(models.models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.degraded).toBe(false);
+		expect(models.models.length).toBe(2);
+		expect(models.models[0].id).toBe("gpt-6.1-sol");
 	});
 
 	it("fetches live models and maps them to ModelInfo", async () => {
@@ -69,7 +70,8 @@ describe("OpenAIProvider", () => {
 		await provider.authenticate("api_key", "test-key");
 
 		const models = await provider.getModels();
-		expect(models).toEqual([
+		expect(models.degraded).toBe(false);
+		expect(models.models).toEqual([
 			{
 				id: "gpt-6-luna",
 				name: "gpt-6-luna",
@@ -119,7 +121,9 @@ describe("OpenAIProvider", () => {
 		await provider.authenticate("api_key", "test-key");
 
 		const models = await provider.getModels();
-		expect(models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.degraded).toBe(true);
+		expect(models.reason).toContain("API key was rejected");
 	});
 
 	it("falls back to the static list on malformed body or network failure", async () => {
@@ -131,7 +135,8 @@ describe("OpenAIProvider", () => {
 		await provider.authenticate("api_key", "test-key");
 
 		let models = await provider.getModels();
-		expect(models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.degraded).toBe(true);
 
 		// 200 JSON but missing the data array
 		fetchMock = vi.fn().mockResolvedValue(
@@ -143,14 +148,16 @@ describe("OpenAIProvider", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		models = await provider.getModels();
-		expect(models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.degraded).toBe(true);
 
 		// Network error
 		fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
 		vi.stubGlobal("fetch", fetchMock);
 
 		models = await provider.getModels();
-		expect(models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.models).toEqual(OpenAIProvider.fallbackModels);
+		expect(models.degraded).toBe(true);
 	});
 
 	it("should track auth state correctly", async () => {

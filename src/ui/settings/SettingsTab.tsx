@@ -118,14 +118,14 @@ export class SettingsTab extends PluginSettingTab {
 						// Make sure the provider instance holds the current key
 						// (this is also how the chat flow authenticates).
 						await provider.authenticate("api_key", key);
-						const models = await provider.getModels();
-						this.fetchedModels = models;
+						const result = await provider.getModels();
+						this.fetchedModels = result.models;
 						this.fetchedForProvider = provider.id;
-						this.fetchStatus = `✓ Loaded ${models.length} models`;
+						this.fetchStatus = result.degraded
+							? `⚠ ${result.reason ?? "Using the built-in model list"}`
+							: `✓ Loaded ${result.models.length} models`;
 					} catch (err) {
-						this.fetchedModels = this.modelsFor(provider.id);
-						this.fetchedForProvider = provider.id;
-						this.fetchStatus = `✗ ${errMessage(err)} — using the built-in list`;
+						console.warn("Vault Compass: unexpected model listing failure", err);
 					}
 					setButtonBusy(false);
 					this.display(); // re-render to repopulate the model dropdown
@@ -254,7 +254,9 @@ function errMessage(err: unknown): string {
 function setStatusUnderline(el: HTMLElement, status: string): void {
 	el.style.color = status.startsWith("✓")
 		? "var(--text-success)"
-		: status.startsWith("✗")
-			? "var(--text-error)"
-			: "var(--text-muted)";
+		: status.startsWith("⚠")
+			? "var(--color-orange, hsl(37 95% 50%))"
+			: status.startsWith("✗")
+				? "var(--text-error)"
+				: "var(--text-muted)";
 }

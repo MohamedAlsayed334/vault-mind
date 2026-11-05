@@ -11,6 +11,12 @@ export interface ModelInfo {
   supportsVision: boolean;
 }
 
+export interface ModelListResult {
+  models: ModelInfo[];
+  degraded: boolean;
+  reason?: string;
+}
+
 export interface ProviderCapabilities {
   streaming: boolean;
   toolCalling: boolean;
