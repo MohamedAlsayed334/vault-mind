@@ -15,11 +15,12 @@ npm run build
 
 **Use a separate Obsidian test vault. Do not test note-editing tools against your real vault.**
 
-1. Run `npm run build`. This produces `main.js` in the repository root.
+1. Run `npm run build`. This produces `main.js` and `styles.css` in the repository root.
 2. Create the plugin directory inside the test vault:
    `.obsidian/plugins/vault-mind/`
 3. Copy these files from the repository root into that directory:
    - `main.js`
+   - `styles.css`
    - `manifest.json`
    - `versions.json`
 4. Open the test vault in Obsidian → **Settings → Community plugins**.
