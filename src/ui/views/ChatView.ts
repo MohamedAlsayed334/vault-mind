@@ -28,11 +28,15 @@ export class ChatView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		const container = this.containerEl.children[1] as HTMLElement;
+		// this.contentEl is the view's scrollable content area; it already has the
+		// full height of the leaf. Style classes (chat.css) keep the height chain
+		// intact: contentEl (flex column) -> mount -> Chat (both flex:1, min-height:0)
+		// so the composer stays pinned at the bottom.
+		const container = this.contentEl;
 		container.empty();
 		container.addClass("vault-mind-chat-container");
 
-		const mountPoint = container.createDiv();
+		const mountPoint = container.createDiv("vault-mind-chat-mount");
 		this.root = createRoot(mountPoint);
 		this.root.render(React.createElement(Chat, { plugin: this.plugin }));
 	}

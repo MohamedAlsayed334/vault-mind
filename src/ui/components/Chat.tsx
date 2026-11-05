@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import type VaultMindPlugin from "@/main";
 import { useAgent } from "@/ui/hooks/useAgent";
-import { MessageBubble } from "@/ui/components/Message";
+import { MessageBubble, isToolLine } from "@/ui/components/Message";
 import { ApprovalModal } from "@/ui/components/ApprovalModal";
 import type { ChatMessage } from "@/core/types";
 
@@ -9,59 +9,200 @@ export interface ChatProps {
 	plugin: VaultMindPlugin;
 }
 
+// ~6 rows of textarea before it stops growing (CSS max-height matches).
+const TEXTAREA_MAX_HEIGHT_PX = 150;
+
+const SUGGESTED_PROMPTS = [
+	"Summarize my current note",
+	"Improve the selected text",
+	"Create a daily note outline",
+];
+
+function messageText(message: ChatMessage): string {
+	if (typeof message.content === "string") return message.content;
+	return message.content
+		.map((b) => (b.type === "text" ? b.text : b.type === "tool_use" ? `[Tool Call: ${b.name}]` : ""))
+		.join("\n");
+}
+
 export const Chat: React.FC<ChatProps> = ({ plugin }) => {
 	const [input, setInput] = useState("");
 	const { messages, status, pendingApproval, sendMessage, cancel, resolveApproval } = useAgent(plugin);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const busy = status === "running" || status === "waiting_approval";
 
+	// Keep the newest message in view.
 	useEffect(() => {
-		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+		messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 	}, [messages, status]);
 
-	const handleSend = (e: React.FormEvent) => {
-		e.preventDefault();
+	// Auto-resize the textarea up to ~6 rows.
+	useEffect(() => {
+		const el = textareaRef.current;
+		if (!el) return;
+		el.style.height = "auto";
+		el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT_PX)}px`;
+	}, [input]);
+
+	// While the agent is running and no streamed text exists yet, show a typing
+	// indicator (covers initial thinking and tool activity bursts).
+	const last = messages[messages.length - 1];
+	const lastHasAssistantText =
+		!!last && last.role === "assistant" && !isToolLine(messageText(last)) && messageText(last).trim().length > 0;
+	const showTyping = status === "running" && !lastHasAssistantText;
+
+	const handleSend = () => {
 		if (!input.trim() || busy) return;
 		sendMessage(input);
 		setInput("");
 	};
 
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		// Enter sends, Shift+Enter inserts a newline — chat-standard behavior.
+		if (e.key === "Enter" && !e.shiftKey) {
+			e.preventDefault();
+			handleSend();
+		}
+	};
+
+	const resizeTextarea = useCallback(() => {
+		textareaRef.current?.focus();
+	}, []);
+
+	const handleUsePrompt = useCallback(
+		(prompt: string) => {
+			// Fill the composer without sending, so the user can review/edit first.
+			setInput(prompt);
+			resizeTextarea();
+		},
+		[resizeTextarea],
+	);
+
+	if (messages.length === 0 && !busy && !pendingApproval) {
+		return (
+			<div className="vault-mind-chat">
+				<EmptyState onUsePrompt={handleUsePrompt} />
+				<ComposerForm
+					className="vault-mind-composer"
+					input={input}
+					setInput={setInput}
+					textareaRef={textareaRef}
+					onKeyDown={handleKeyDown}
+					busy={busy}
+					onSend={handleSend}
+					onCancel={cancel}
+				/>
+			</div>
+		);
+	}
+
 	const statusLabel =
-		status === "running"
-			? "Thinking..."
+		status === "running" && !showTyping
+			? null
 			: status === "waiting_approval"
 				? "Waiting for your approval..."
 				: null;
 
 	return (
-		<div className="vault-mind-chat" style={{ display: "flex", flexDirection: "column", height: "100%", padding: "10px" }}>
-			<div className="vault-mind-messages" style={{ flex: 1, overflowY: "auto", marginBottom: "10px" }}>
+		<div className="vault-mind-chat">
+			<div className="vault-mind-messages">
 				{messages.map((msg: ChatMessage, idx: number) => (
 					<MessageBubble key={idx} message={msg} />
 				))}
+				{showTyping && !pendingApproval && <TypingIndicator />}
 				{statusLabel && !pendingApproval && (
-					<div style={{ fontStyle: "italic", opacity: 0.7, padding: "4px 8px" }}>{statusLabel}</div>
+					<div className="vault-mind-msg vault-mind-msg--assistant">
+						<span style={{ fontStyle: "italic", opacity: 0.7 }}>{statusLabel}</span>
+					</div>
 				)}
 				{pendingApproval && (
 					<ApprovalModal toolName={pendingApproval.tool} args={pendingApproval.args} onResolve={resolveApproval} />
 				)}
 				<div ref={messagesEndRef} />
 			</div>
-			<form onSubmit={handleSend} style={{ display: "flex", gap: "8px" }}>
-				<input
-					type="text"
-					value={input}
-					onChange={(e) => setInput(e.target.value)}
-					placeholder="Ask about your vault..."
-					disabled={busy}
-					style={{ flex: 1, padding: "8px", borderRadius: "4px", border: "1px solid var(--background-modifier-border)" }}
-				/>
-				{busy ? (
-					<button type="button" onClick={cancel} style={{ padding: "8px 12px" }}>Stop</button>
-				) : (
-					<button type="submit" style={{ padding: "8px 12px" }}>Send</button>
-				)}
-			</form>
+			<ComposerForm
+				className="vault-mind-composer"
+				input={input}
+				setInput={setInput}
+				textareaRef={textareaRef}
+				onKeyDown={handleKeyDown}
+				busy={busy}
+				onSend={handleSend}
+				onCancel={cancel}
+			/>
 		</div>
 	);
 };
+
+const TypingIndicator: React.FC = () => (
+	<div className="vault-mind-msg vault-mind-msg--assistant">
+		<div className="vault-mind-typing" aria-label="Vault Mind is responding">
+			<span className="vault-mind-typing-dot" />
+			<span className="vault-mind-typing-dot" />
+			<span className="vault-mind-typing-dot" />
+		</div>
+	</div>
+);
+
+const EmptyState: React.FC<{ onUsePrompt: (prompt: string) => void }> = ({ onUsePrompt }) => (
+	<div className="vault-mind-empty">
+		<h2 className="vault-mind-empty__title">Vault Mind</h2>
+		<p className="vault-mind-empty__desc">
+			Your AI agent for Obsidian. It reads context from the current note and selection, and can edit
+			your notes — every write requires your approval first.
+		</p>
+		<div className="vault-mind-empty__prompts">
+			{SUGGESTED_PROMPTS.map((prompt) => (
+				<button key={prompt} type="button" className="vault-mind-empty__prompt" onClick={() => onUsePrompt(prompt)}>
+					{prompt}
+				</button>
+			))}
+		</div>
+	</div>
+);
+
+interface ComposerProps {
+	className: string;
+	input: string;
+	setInput: React.Dispatch<React.SetStateAction<string>>;
+	textareaRef: React.RefObject<HTMLTextAreaElement>;
+	onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+	busy: boolean;
+	onSend: () => void;
+	onCancel: () => void;
+}
+
+function ComposerForm({ className, input, setInput, textareaRef, onKeyDown, busy, onSend, onCancel }: ComposerProps) {
+	return (
+		<form
+			onSubmit={(e) => {
+				e.preventDefault();
+				onSend();
+			}}
+			className={className}
+		>
+			<textarea
+				ref={textareaRef}
+				rows={1}
+				value={input}
+				onChange={(e) => setInput(e.target.value)}
+				onKeyDown={onKeyDown}
+				placeholder="Ask about your vault…  (Enter to send, Shift+Enter for a new line)"
+				disabled={busy}
+				aria-label="Message Vault Mind"
+				className="vault-mind-textarea"
+				style={{ height: "auto" }}
+			/>
+			{busy ? (
+				<button type="button" onClick={onCancel} className="vault-mind-btn vault-mind-btn--stop" title="Stop generating">
+					Stop
+				</button>
+			) : (
+				<button type="submit" disabled={!input.trim()} className="vault-mind-btn vault-mind-btn--primary" title="Send message">
+					Send
+				</button>
+			)}
+		</form>
+	);
+}

@@ -1,0 +1,347 @@
+/* Vault Mind chat UI.
+   Uses Obsidian theme variables only so the chat follows the active theme.
+   esbuild emits this file as styles.css next to main.js, which Obsidian loads
+   automatically — no runtime injection needed. */
+
+/* ─── Layout: messages scroll area on top, composer pinned to the bottom ──── */
+
+.vault-mind-chat-container {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+	padding: var(--size-4-2);
+}
+
+.vault-mind-chat-mount {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+.vault-mind-chat {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+.vault-mind-messages {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding-right: var(--size-2-2);
+}
+
+/* ─── Messages ────────────────────────────────────────────────────────────── */
+
+.vault-mind-msg {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: var(--size-4-3);
+}
+
+.vault-mind-msg--user {
+	align-items: flex-end;
+}
+
+.vault-mind-msg--assistant {
+	align-items: flex-start;
+}
+
+.vault-mind-bubble {
+	max-width: 88%;
+	padding: var(--size-2-3) var(--size-4-2);
+	white-space: pre-wrap;
+	word-break: break-word;
+	line-height: 1.55;
+}
+
+.vault-mind-bubble--user {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-radius: var(--radius-m);
+	font-size: var(--font-ui-medium);
+}
+
+/* Assistant responses: plain text, no bubble — reads like a document */
+.vault-mind-bubble--assistant {
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	border-radius: var(--radius-m);
+}
+
+.vault-mind-error-line {
+	color: var(--text-error);
+	font-size: var(--font-ui-small);
+	white-space: pre-wrap;
+	word-break: break-word;
+	padding: var(--size-2-2) 0;
+}
+
+/* Tool activity: compact muted chip rows, not full bubbles */
+.vault-mind-tool-chip {
+	display: inline-flex;
+	align-items: center;
+	padding: var(--size-2-1) var(--size-2-2);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	border-radius: var(--radius-m);
+	line-height: 1.4;
+}
+
+/* ─── Streaming typing indicator (subtle, respects reduced motion) ────────── */
+
+.vault-mind-typing {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-1);
+	padding: var(--size-2-2) 0;
+}
+
+.vault-mind-typing-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--text-muted);
+	opacity: 0.35;
+	animation: vault-mind-typing-bounce 1.2s ease-in-out infinite;
+}
+
+.vault-mind-typing-dot:nth-child(2) {
+	animation-delay: 0.15s;
+}
+
+.vault-mind-typing-dot:nth-child(3) {
+	animation-delay: 0.3s;
+}
+
+@keyframes vault-mind-typing-bounce {
+	0%,
+	60%,
+	100% {
+		transform: translateY(0);
+		opacity: 0.35;
+	}
+	30% {
+		transform: translateY(-3px);
+		opacity: 0.8;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vault-mind-typing-dot {
+		animation: none;
+		opacity: 0.6;
+	}
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────────── */
+
+.vault-mind-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	gap: var(--size-4-2);
+	height: 100%;
+	padding: var(--size-4-4);
+	color: var(--text-muted);
+}
+
+.vault-mind-empty__title {
+	color: var(--text-normal);
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-semibold);
+	margin: 0;
+}
+
+.vault-mind-empty__desc {
+	margin: 0;
+	font-size: var(--font-ui-small);
+	max-width: 42ch;
+	line-height: 1.5;
+}
+
+.vault-mind-empty__prompts {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+	width: 100%;
+	max-width: 340px;
+	margin-top: var(--size-2-2);
+}
+
+.vault-mind-empty__prompt {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	padding: var(--size-2-3) var(--size-4-2);
+	cursor: pointer;
+}
+
+.vault-mind-empty__prompt:hover {
+	background: var(--background-modifier-hover);
+}
+
+/* ─── Composer (last child — always at the bottom) ────────────────────────── */
+
+.vault-mind-composer {
+	display: flex;
+	align-items: flex-end;
+	gap: var(--size-2-2);
+	margin-top: var(--size-2-3);
+	padding-top: var(--size-2-3);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.vault-mind-textarea {
+	flex: 1;
+	min-height: 0;
+	max-height: 150px; /* ~6 rows */
+	resize: none;
+	overflow-y: auto;
+	padding: var(--size-2-3) var(--size-2-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	font-family: inherit;
+	line-height: 1.5;
+}
+
+.vault-mind-textarea:focus {
+	outline: none;
+	border-color: var(--background-modifier-border-focus);
+}
+
+.vault-mind-textarea:disabled {
+	opacity: 0.6;
+}
+
+.vault-mind-textarea::placeholder {
+	color: var(--text-faint);
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────────────── */
+
+.vault-mind-btn {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	padding: var(--size-2-2) var(--size-4-2);
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.vault-mind-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+/* Accent (Send / Approve) */
+.vault-mind-btn--primary {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.vault-mind-btn--primary:hover:not(:disabled) {
+	background: var(--interactive-accent-hover);
+}
+
+.vault-mind-btn--primary:disabled,
+.vault-mind-btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+/* Stop: soft error affordance so Send and Stop never look alike */
+.vault-mind-btn--stop {
+	background: var(--background-modifier-error);
+	color: var(--text-error);
+	border-color: var(--background-modifier-error);
+}
+
+.vault-mind-btn--stop:hover {
+	background: var(--background-modifier-error-hover) !important;
+	color: var(--text-error) !important;
+}
+
+/* ─── Approval card ───────────────────────────────────────────────────────── */
+
+.vault-mind-approval {
+	margin: var(--size-2-2) 0;
+	padding: var(--size-4-2);
+	border: 1px solid var(--background-modifier-border);
+	border-left: 3px solid var(--interactive-accent);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+}
+
+.vault-mind-approval__title {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-2-2);
+	margin-bottom: var(--size-2-2);
+}
+
+.vault-mind-approval__tool {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+}
+
+.vault-mind-approval__id {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-family: var(--font-monospace);
+}
+
+.vault-mind-approval__hint {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	margin: 0 0 var(--size-2-1) 0;
+}
+
+.vault-mind-approval__label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	display: block;
+	margin-bottom: var(--size-2-1);
+}
+
+.vault-mind-approval__value {
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	word-break: break-word;
+}
+
+.vault-mind-approval__code {
+	margin: 0 0 var(--size-2-1) 0;
+	padding: var(--size-2-2);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	white-space: pre-wrap;
+	word-break: break-word;
+	max-height: 140px;
+	overflow-y: auto;
+}
+
+.vault-mind-approval__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--size-2-2);
+	margin-top: var(--size-2-3);
+}

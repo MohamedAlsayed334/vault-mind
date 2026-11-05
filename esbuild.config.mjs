@@ -12,7 +12,12 @@ const prod = process.argv[2] === "production";
 
 const context = await esbuild.context({
   banner: { js: banner },
-  entryPoints: ["src/main.ts"],
+  entryPoints: [
+    { in: "src/main.ts", out: "main" },
+    // Obsidian auto-loads styles.css from the plugin root
+    { in: "src/ui/styles/chat.css", out: "styles" },
+  ],
+  outdir: ".",
   bundle: true,
   external: [
     "obsidian",
@@ -35,7 +40,6 @@ const context = await esbuild.context({
   logLevel: "info",
   sourcemap: prod ? false : "inline",
   treeShaking: true,
-  outfile: "main.js",
   jsx: "automatic",
   // Enforce: no Node built-ins reach the bundle on mobile
   platform: "browser",
