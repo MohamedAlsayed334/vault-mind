@@ -336,3 +336,39 @@ Remaining in this phase:
 
 V1 is "done" only after the manual acceptance test passes — automated checks are
 necessary but not sufficient.
+
+---
+
+## Phase 8 round 2 — status (November 2026)
+
+Round 1 (the stabilization pass) shipped the integration gaps listed above.
+Round 2 was driven by a real-vault test done by the user plus an external
+review, and shipped:
+
+1. **Cancel-hang fix:** cancelling while an approval was pending aborted the
+   stream but left the loop awaiting the resolver forever — `useAgent` now
+   resolves the pending approval as `false` on cancel.
+2. **Key not in URL:** the Gemini API key moved from the request URL query
+   string into a request header.
+3. **Unique tool IDs:** Gemini function-call IDs are now unique per invocation.
+4. **Live model fetching:** Gemini and OpenAI fetch their model lists live
+   (with rotated static fallbacks), and dead default model IDs stored in
+   settings are migrated on load.
+5. **Settings overhaul:** the settings tab is reorganized around the selected
+   provider.
+6. **OpenAI tool parity:** the OpenAI provider now maps tool calls (it was
+   previously text-only).
+7. **Chat UI redesign:** sticky bottom composer (textarea, Enter to send,
+   Shift+Enter newline, auto-grow), message bubbles, muted tool chips, typing
+   indicator, empty state with suggested prompts, and a redesigned approval
+   card. Styles live in `src/ui/styles/chat.css`, emitted by esbuild as
+   `styles.css`.
+
+What remains (also on the review "still open" list):
+
+- [ ] OAuth PKCE end-to-end for OpenAI and Google — next milestone
+- [ ] Diff preview in the approval card (currently parsed argument fields)
+- [ ] Mobile smoke test
+- [ ] Session persistence via StorageAdapter
+- [ ] Streaming fallback via `requestUrl` when CORS blocks `fetch` on mobile
+- [ ] Final V1 acceptance run through [TESTING.md](./TESTING.md)
