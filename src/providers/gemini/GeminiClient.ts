@@ -1,4 +1,5 @@
 import type { ChatMessage, ContentBlock, ToolDefinition } from "@/core/types";
+import { ProviderError, classify, isAbortError } from "@/core/ProviderError";
 
 export interface GeminiFunctionCall {
 	name: string;
@@ -55,20 +56,42 @@ export class GeminiClient {
 			];
 		}
 
-		const response = await fetch(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				// Auth via header keeps the key out of URLs (which end up in logs/proxies).
-				"x-goog-api-key": this.apiKey,
-			},
-			body: JSON.stringify(body),
-			signal: params.signal,
-		});
+		// This client is only used for generate/stream calls, so a model id is
+		// always in play — a 404 here means "model not found" (see classify docs).
+		const isModelRequest = true;
+
+		let response: Response;
+		try {
+			response = await fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					// Auth via header keeps the key out of URLs (which end up in logs/proxies).
+					"x-goog-api-key": this.apiKey,
+				},
+				body: JSON.stringify(body),
+				signal: params.signal,
+			});
+		} catch (err: unknown) {
+			// User-driven abort is not an error — rethrow for the provider wrapper,
+			// which stays silent on aborts (matching orchestrator semantics).
+			if (isAbortError(err)) throw err;
+			const cause = err instanceof Error ? err.message : String(err);
+			throw new ProviderError("network", "Couldn't connect to Google Gemini", {
+				cause,
+				providerId: "gemini",
+				modelId: params.model,
+			});
+		}
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+			const code = classify(response.status, errorText, { modelRequest: isModelRequest });
+			throw new ProviderError(code, `Gemini rejected the request (${response.status})`, {
+				cause: errorText,
+				providerId: "gemini",
+				modelId: params.model,
+			});
 		}
 
 		if (!response.body) {

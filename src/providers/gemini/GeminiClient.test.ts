@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { GeminiClient } from "./GeminiClient";
+import { ProviderError, isAbortError } from "../../core/ProviderError";
 
 /** Encode SSE data lines as a ReadableStream, as a real fetch response would. */
 function sseResponse(events: object[]): Response {
@@ -176,20 +177,99 @@ describe("GeminiClient", () => {
 		]);
 	});
 
-	it("surfaces HTTP errors as thrown messages", async () => {
-		const fetchMock = vi.fn().mockResolvedValue(new Response("quota exceeded", { status: 429 }));
+	it("throws a coded ProviderError on HTTP errors, preserving the raw body as cause", async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response("quota exceeded, check your billing", { status: 429 }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		const client = new GeminiClient();
 		client.setApiKey("test-key");
 
-		await expect(async () => {
+		const err = (await asyncThrows(async () => {
 			for await (const _ of client.streamGenerateContent({
 				model: "gemini-3.8-flash",
 				messages: [{ role: "user", content: "hi" }],
 			})) {
 				// consume
 			}
-		}).rejects.toThrow("Gemini API error (429)");
+		})) as ProviderError;
+		expect(err).toBeInstanceOf(ProviderError);
+		expect(err.message).toBe("Gemini rejected the request (429)");
+		expect(err.code).toBe("quota_exceeded");
+		expect(err.cause).toBe("quota exceeded, check your billing");
+		expect(err.modelId).toBe("gemini-3.8-flash");
+	});
+
+	it("maps a 404 on a retired model to model_not_found with the real body as cause", async () => {
+		// Real production body captured from Gemini's retirement of gemini-2.0-flash.
+		const body =
+			'{"error":{"code":404,"message":"This model models/gemini-2.0-flash is no longer available...","status":"NOT_FOUND"}}';
+		const fetchMock = vi.fn().mockResolvedValue(new Response(body, { status: 404 }));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const client = new GeminiClient();
+		client.setApiKey("test-key");
+
+		const err = (await asyncThrows(async () => {
+			for await (const _ of client.streamGenerateContent({
+				model: "gemini-2.0-flash",
+				messages: [{ role: "user", content: "hi" }],
+			})) {
+				// consume
+			}
+		})) as ProviderError;
+		expect(err).toBeInstanceOf(ProviderError);
+		expect(err.code).toBe("model_not_found");
+		expect(err.message).toBe("Gemini rejected the request (404)");
+		expect(err.cause).toBe(body);
+	});
+
+	it("classifies fetch network failures as network errors", async () => {
+		const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const client = new GeminiClient();
+		client.setApiKey("test-key");
+
+		const err = (await asyncThrows(async () => {
+			for await (const _ of client.streamGenerateContent({
+				model: "gemini-3.8-flash",
+				messages: [{ role: "user", content: "hi" }],
+			})) {
+				// consume
+			}
+		})) as ProviderError;
+		expect(err).toBeInstanceOf(ProviderError);
+		expect(err.code).toBe("network");
+		expect(err.cause).toBe("Failed to fetch");
+	});
+
+	it("rethrows user aborts unchanged so they never surface as errors", async () => {
+		const abortError = new Error("The operation was aborted");
+		abortError.name = "AbortError";
+		const fetchMock = vi.fn().mockRejectedValue(abortError);
+		vi.stubGlobal("fetch", fetchMock);
+
+		const client = new GeminiClient();
+		client.setApiKey("test-key");
+
+		const err = (await asyncThrows(async () => {
+			for await (const _ of client.streamGenerateContent({
+				model: "gemini-3.8-flash",
+				messages: [{ role: "user", content: "hi" }],
+			})) {
+				// consume
+			}
+		})) as Error;
+		expect(isAbortError(err)).toBe(true);
 	});
 });
+
+/** Consume the async iterable and return the rejection it ended with. */
+async function asyncThrows(run: () => Promise<unknown>): Promise<unknown> {
+	try {
+		await run();
+	} catch (err) {
+		return err;
+	}
+	throw new Error("Expected the iterable to throw, but it completed");
+}

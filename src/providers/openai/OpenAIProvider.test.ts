@@ -414,15 +414,62 @@ describe("OpenAIProvider", () => {
 		expect(events).toEqual([{ type: "text_delta", delta: "ok" }, { type: "done" }]);
 	});
 
-	it("surfaces HTTP errors from chat completions as error events", async () => {
+	it("surfaces HTTP errors from chat completions as coded error events", async () => {
 		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("bad key", { status: 401 })));
 
 		const provider = new OpenAIProvider();
 		await provider.authenticate("api_key", "test-key");
 
 		const events = await collect(provider, [{ role: "user", content: "hi" }]);
-		expect(events[0].type).toBe("error");
+		expect(events[0]).toMatchObject({
+			type: "error",
+			code: "invalid_key",
+			message: "OpenAI rejected the request (401)",
+			cause: "bad key",
+		});
 		expect(events.at(-1)?.type).toBe("error");
+	});
+
+	it("maps a 404 on chat completions to model_not_found", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue(
+				new Response('{"error":{"message":"The model gpt-old does not exist"}}', { status: 404 }),
+			),
+		);
+
+		const provider = new OpenAIProvider();
+		await provider.authenticate("api_key", "test-key");
+
+		const events = await collect(provider, [{ role: "user", content: "hi" }]);
+		expect(events[0]).toMatchObject({ type: "error", code: "model_not_found" });
+	});
+
+	it("classifies network failures as network errors", async () => {
+		vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+
+		const provider = new OpenAIProvider();
+		await provider.authenticate("api_key", "test-key");
+
+		const events = await collect(provider, [{ role: "user", content: "hi" }]);
+		expect(events[0]).toMatchObject({
+			type: "error",
+			code: "network",
+			message: "Couldn't connect to OpenAI",
+			cause: "Failed to fetch",
+		});
+	});
+
+	it("stays quiet on user aborts instead of surfacing them as errors", async () => {
+		const abortError = new Error("The operation was aborted");
+		abortError.name = "AbortError";
+		vi.stubGlobal("fetch", vi.fn().mockRejectedValue(abortError));
+
+		const provider = new OpenAIProvider();
+		await provider.authenticate("api_key", "test-key");
+
+		const events = await collect(provider, [{ role: "user", content: "hi" }]);
+		expect(events).toEqual([{ type: "error", message: "Cancelled" }]);
 	});
 
 	it("errors when generating without authentication", async () => {

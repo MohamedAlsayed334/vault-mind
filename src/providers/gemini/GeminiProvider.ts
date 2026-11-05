@@ -1,5 +1,6 @@
 import type { AIRequest, AIEvent, ModelInfo, ProviderCapabilities, AuthState } from "@/core/types";
 import type { AIProvider } from "@/providers/base/AIProvider";
+import { ProviderError, classify, isAbortError } from "@/core/ProviderError";
 import { GeminiClient } from "./GeminiClient";
 
 export class GeminiProvider implements AIProvider {
@@ -81,11 +82,19 @@ export class GeminiProvider implements AIProvider {
 			signal: AbortSignal.timeout(10_000),
 		});
 		if (!res.ok) {
-			throw new Error(`Gemini API error (${res.status})`);
+			// This probe hits the models LIST endpoint: a 404 here is a URL/deploy
+			// problem, not a missing model, so no modelRequest hint is passed.
+			const body = await res.text().catch(() => undefined);
+			throw new ProviderError(classify(res.status, body), `Gemini rejected the request (${res.status})`, {
+				cause: body,
+				providerId: "gemini",
+			});
 		}
-		const data = await res.json();
+		const data = await res.json().catch(() => null);
 		if (!data || !Array.isArray(data.models)) {
-			throw new Error("Unexpected response from Gemini models endpoint");
+			throw new ProviderError("unknown", "Unexpected response from Gemini models endpoint", {
+				providerId: "gemini",
+			});
 		}
 	}
 
@@ -178,8 +187,30 @@ export class GeminiProvider implements AIProvider {
 				}
 			}
 			yield { type: "done" };
-		} catch (err: any) {
-			yield { type: "error", message: err.message || String(err) };
+		} catch (err: unknown) {
+			// User-driven abort: fetch rejects with an AbortError the orchestrator
+			// intentionally swallows (it returns on signal.aborted before handling
+			// events). Yield a quiet "Cancelled" so the shape is unchanged and no
+			// scary error ever surfaces in chat.
+			if (isAbortError(err)) {
+				yield { type: "error", message: "Cancelled" };
+				return;
+			}
+			if (err instanceof ProviderError) {
+				yield { type: "error", message: err.message, code: err.code, cause: err.cause };
+				return;
+			}
+			if (err instanceof TypeError) {
+				// "Failed to fetch" and friends — a genuine network failure.
+				yield {
+					type: "error",
+					message: "Couldn't connect to Google Gemini",
+					code: "network",
+					cause: err.message,
+				};
+				return;
+			}
+			yield { type: "error", message: err instanceof Error ? err.message : String(err) };
 		}
 	}
 }

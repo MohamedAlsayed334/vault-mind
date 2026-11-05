@@ -1,3 +1,5 @@
+import type { ErrorCode } from "./ProviderError";
+
 // ─── Provider types ──────────────────────────────────────────────────────────
 
 export interface ModelInfo {
@@ -30,7 +32,7 @@ export type AIEvent =
   | { type: "tool_call"; id: string; name: string; arguments: unknown }
   | { type: "tool_result"; id: string; result: unknown }
   | { type: "done" }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string; code?: ErrorCode; cause?: string };
 
 // ─── Chat types ───────────────────────────────────────────────────────────────
 
@@ -71,7 +73,7 @@ export type AgentEvent =
   | { type: "tool_completed"; tool: string; result: ToolResult }
   | { type: "approval_required"; tool: string; args: unknown; resolve: (approved: boolean) => void }
   | { type: "response"; content: string }
-  | { type: "error"; message: string }
+  | { type: "error"; message: string; code?: ErrorCode; cause?: string }
   | { type: "done" };
 
 export interface AgentSession {
