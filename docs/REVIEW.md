@@ -29,10 +29,31 @@ remains open.
 | 17 | Medium | No CI running typecheck/lint/test/build on every push/PR | ✅ Fixed — `.github/workflows/ci.yml` |
 | 18 | Medium | Tests were mostly initialization checks; nothing covered the agent loop, tool execution, approval, or Gemini tool-call mapping | ✅ Improved — new tests for `AgentOrchestrator` (7 cases incl. approval execute/reject, unknown tool, abort) and `GeminiClient` (6 cases incl. SSE streaming, function calls, request mapping, HTTP errors) |
 
+## Round 2 — findings from the real-vault test (November 2026)
+
+After shipping the fixes above, the plugin was tested in a real Obsidian vault
+by the user and re-examined in an external review. The findings and their
+status:
+
+| Issue | Status |
+|-------|--------|
+| Cancel during a pending approval hung the loop forever — the stream aborted but the orchestrator kept awaiting the approval resolver | ✅ Fixed — `useAgent.cancel()` now resolves the pending approval as `false` while aborting the stream (`refactor` in `1abfd20`) |
+| Gemini API key was sent in the request URL query string — it leaked into logs/history | ✅ Fixed — the key now travels in a request header |
+| Gemini tool-call IDs were reused between invocations, confusing the tool-result round trip | ✅ Fixed — unique IDs per invocation |
+| Hardcoded fallback model lists went stale (rotated/dead models) and produced 404s | ✅ Fixed — fallback lists rotated to current model IDs, models fetched live from the providers, and stale default model IDs in settings are migrated on load |
+| Settings UX: the provider picker paid no attention to which provider was selected | ✅ Fixed — settings are reorganized around the selected provider |
+| OpenAI provider had no tool-call mapping (was listed as a gap) | ✅ Now implemented — OpenAI tool calling is mapped for agent-loop parity (was previously "text-only") |
+| localStorage trade-off was described inaccurately in the README (it read as if keys were safely sandboxed) | ✅ Fixed — README now states plainly that API keys live in the vault's browser storage, not in encrypted secret storage |
+| Chat UI: the message input rendered at the top of the pane and the overall look was bare (Send/Stop only) | ✅ Fixed — sticky bottom composer over a proper height chain (`flex` + `min-height: 0`), message bubbles, tool chips, typing indicator, empty state with suggested prompts, redesigned approval card; styles moved out of inline attributes into `src/ui/styles/chat.css` (emitted as `styles.css`) |
+
+See [PLAN.md](./PLAN.md) — "Phase 8 round 2" — for what shipped in that round
+and what remains.
+
 ## Still open (tracked in the plan)
 
-- OpenAI tool-calling mapping (provider currently text-only).
-- OAuth end-to-end (PKCE flow, callback handler, token exchange) for OpenAI and Google — placeholder controls have been removed until then.
-- Stylesheet for the chat UI (inline styles for now).
-- Manual verification in a real Obsidian vault (desktop first, then mobile) — see [TESTING.md](./TESTING.md).
+- OAuth end-to-end (PKCE flow, callback handler, token exchange) for OpenAI and Google — this is next milestone work.
+- Diff preview in the approval card (the card now shows parsed argument fields; a real diff view is still pending).
+- Mobile smoke test.
 - Streaming fallback via `requestUrl` when CORS blocks `fetch` on mobile.
+- Session persistence via StorageAdapter.
+- Manual verification in a real Obsidian vault (desktop first, then mobile) — see [TESTING.md](./TESTING.md).
