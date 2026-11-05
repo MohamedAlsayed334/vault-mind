@@ -1,96 +1,40 @@
 # Vault Compass
 
-Vault Compass is an Obsidian plugin for AI-assisted note work: an agent with a reasoning loop, vault tool execution (read / search / edit), and an approval gate for every write. Desktop + mobile.
+Vault Compass brings AI-assisted note work into Obsidian. Chat about the note you have open, search your vault, and request edits while keeping control of every change.
 
-The V1 implementation phases (1–8) are recorded in [docs/PLAN.md](./docs/PLAN.md). Phases 1–7 are implemented, and the integration gaps found in the November 2026 reviews (rounds 1 and 2) have been fixed — see [docs/REVIEW.md](./docs/REVIEW.md).
+## Features
 
-## What works now
+- Chat with Google Gemini or OpenAI using your own API key.
+- Automatically include the active note and selected text as context.
+- Search notes and request note edits through the chat.
+- Review and explicitly approve or reject every proposed write before it changes your vault.
+- Stream responses in an Obsidian sidebar on desktop and mobile.
 
-- Chat sidebar (ribbon icon or **Open Vault Compass** command) with streaming responses, a composer pinned to the bottom (Enter to send, Shift+Enter for a newline), an empty state with suggested prompts, and a compact approval card for write actions
-- Agent loop with tool calling: `read_note`, `search_vault`, `edit_note`
-- Approval gate: `edit_note` shows an Approve/Reject card and never writes without explicit approval
-- Vault context: the active note and your current selection are included automatically
-- Gemini and OpenAI providers, both with API key auth, full tool-call round trip, and live model listing (with static fallbacks)
-- API keys stored in browser-side `TokenStore`, never in `data.json` (legacy keys are migrated out automatically)
-- Automated checks: typecheck, ESLint, Vitest (agent loop, approval gate, Gemini SSE/tool mapping), production build — all wired into GitHub Actions CI
+## Install
 
-## Requirements
+Vault Compass is currently installed manually; it is not yet available through the Community Plugins browser.
 
-- Node.js 20 or newer
-- npm
-- Obsidian desktop for the first manual test (test mobile separately)
-- A Gemini API key
+1. Download the release files `main.js`, `styles.css`, `manifest.json`, and `versions.json`.
+2. In your vault, create `.obsidian/plugins/vault-compass/` and put those files there.
+3. In Obsidian, open **Settings → Community plugins**, enable community plugins if prompted, and enable **Vault Compass**.
+4. Open **Settings → Vault Compass**, choose Gemini or OpenAI, enter an API key, and choose a model.
+5. Open the chat from the Vault Compass ribbon icon or the **Open Vault Compass** command.
 
-## Install dependencies and run checks
+OAuth sign-in is not available yet. An API key from the selected provider is required.
 
-From the repository root:
+## Privacy and security
 
-```bash
-npm ci
-npm run typecheck
-npm run lint
-npm test
-npm run build
-```
+- Vault Compass has no backend server. Chat requests go directly to the AI provider you select.
+- The active note and selected text may be sent to that provider as context. Do not use the plugin with content you are not willing to share with that provider; review the provider's privacy and retention policies.
+- API keys are kept in Obsidian's browser storage, not encrypted secret storage. Someone with access to your vault data and operating-system account may be able to read them. Keys are not stored in plugin `data.json`.
+- The Gemini API key is sent in a request header, not in the URL.
+- Any tool that writes to your vault requires your explicit approval. Rejecting a proposal leaves the note unchanged.
 
-The production build creates `main.js` and `styles.css` in the repository root. For development, use:
+## Current limitations
 
-```bash
-npm run dev
-```
+- Google and OpenAI OAuth are not implemented; API keys are required.
+- The approval card does not yet provide a visual diff preview.
+- Chat sessions are not persisted between plugin sessions.
+- Mobile behavior still needs a manual smoke test, including provider streaming compatibility.
 
-This starts esbuild watch mode.
-
-## Install into a test vault
-
-**Use a separate Obsidian test vault. Do not test note-editing tools against your real vault.**
-
-1. Run `npm run build`.
-2. Create the plugin directory inside the test vault: `.obsidian/plugins/vault-compass/`
-3. Copy these files from the repository root into that directory:
-   - `main.js`
-   - `styles.css`
-   - `manifest.json`
-   - `versions.json`
-4. In Obsidian, open **Settings → Community plugins** and enable Vault Compass. If it does not appear, restart Obsidian and check the developer console for errors.
-5. Open **Settings → Vault Compass**, choose a provider, enter your API key, and pick a model.
-6. Click the Vault Compass ribbon icon (or run **Open Vault Compass** from the command palette) to open the chat sidebar.
-
-The full manual test script — chat smoke test, read/search tools, the write-approval gate, cancellation, persistence, and a mobile checklist — lives in [docs/TESTING.md](./docs/TESTING.md).
-
-## Automated test coverage
-
-- `AgentOrchestrator` — full loop, tool execution + result fed back, approval required and resolved, rejection prevents execution, unknown tools, abort handling, model/systemPrompt passthrough
-- `GeminiClient` — SSE streaming, `functionCall` streaming, `functionDeclarations` sent, `tool_use`/`tool_result` → `functionCall`/`functionResponse` mapping, HTTP errors
-- `ContextBuilder` — context assembly, truncation, prompt injection
-- `TokenStore` / `GeminiProvider` — storage and auth-state basics
-
-## Security notes
-
-- Use a disposable/test vault for development.
-- API keys are stored in the vault's browser storage (`TokenStore` — Obsidian's `localStorage`). This is plain browser storage, **not** encrypted secret storage — anyone with access to that vault's data and this machine's user account can read the keys. Keys are never written to `data.json`. Older versions did persist the Gemini key there — the plugin migrates and strips it on first load after upgrading.
-- The Gemini key is sent as a request header, not in the request URL, so it does not end up in proxy/server logs or browser history.
-- **Your note content is sent to the selected AI provider.** The active note and your current text selection are included as context in every prompt. Do not use Vault Compass on notes containing secrets you are not willing to share with your AI provider.
-- OAuth sign-in (OpenAI / Google) is disabled until implemented end-to-end; do not rely on any leftover scaffolding.
-- Write tools are always gated behind an explicit Approve/Reject card. If a write ever happens without the card, report it as a bug.
-
-## Architecture
-
-Modular monolith; the plugin runs inside Obsidian:
-
-- `core/` — shared types and agent orchestration
-- `providers/` — Gemini/OpenAI provider adapters
-- `tools/` — vault read/edit/search tools
-- `context/` — current-note context and vault search
-- `obsidian/` — Obsidian API adapter
-- `auth/` — token storage and future OAuth
-- `storage/` — plugin settings
-- `ui/` — React components, hook, settings tab, and chat view
-
-See [AGENTS.md](./AGENTS.md), [ARCHITECTURE.md](./ARCHITECTURE.md) and the [docs/](./docs) folder (plan, review findings, testing guide) before changing architecture or starting another phase.
-
-## Next steps
-
-1. Run the manual V1 acceptance test in a disposable desktop vault: open sidebar → ask about the active note → request an edit → reject (verify the note is unchanged) → approve (verify only the intended text changed).
-2. Mobile smoke test.
-3. Then: end-to-end OAuth, diff preview in the approval card, session persistence — tracked in [docs/PLAN.md](./docs/PLAN.md), Phase 8 round 2.
+See [the roadmap](docs/ROADMAP.md) for planned work and [the testing guide](docs/TESTING.md) for manual verification details.
